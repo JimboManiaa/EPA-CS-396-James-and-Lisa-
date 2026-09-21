@@ -1,7 +1,26 @@
+/* CSS which impacts ALL pages ==============================*/
+body {
+    font-family:Arial, Helvetica, sans-serif;
+    background-image: url(site_bg.png);
+    background-size: cover;
+    margin: 0;
+    padding: 0;
+}
+.content {
+    max-width: 800px;  
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    width: 1000px;
+    height: 100dvh;
+}
+
+/* Nav Bar CSS ==============================*/
 /* logo */
 .title_container {
     display: flex;
     margin-bottom: 10px;
+    align-items: flex-end;
 }
 
 #logo {
@@ -9,39 +28,58 @@
     height: 100px;
 }
 
-#site_title {
-    padding: 10px;
-}
-
-/* nav bar*/
+/* nav bar (is a table)*/
 .nav_bar {
-    background-color: rgb(179, 226, 255);
+    background-color: rgb(57, 122, 213);
     justify-content: center;
     align-items: center;
     width: 100%;
-    border-radius: 10px;
+    border-collapse: collapse;
+}
+/* REFINE THIS ASAP - IMPACTS ALL LINKS */
+a {
+    color: white;
 }
 .nav_cell {
-    border: 3px solid rgb(114, 158, 240);
-    border-radius: 10px;
+    border: 3px solid rgb(38, 85, 150);
     text-align: center;
-    width: 20%;
 }
 .home_cell {
     width: 5%;
-    border: 3px solid rgb(114, 158, 240);
+    border: 3px solid rgb(38, 85, 150);
     text-align: center;
     border-radius: 10px;
 }
+/* The Home image in the nav bar */
 #nav_home {
-    width: 25px;
+    width: 20px;
 }
 
-/* Home page */
-.content {
-    max-width: 800px;  
-    margin: 0 auto;
+/* Database Related CSS ============================*/
+.db_table {
+    width: 100%;
+    border-collapse: collapse;
 }
+th, td {
+    padding: 10px;
+    text-align: left;
+}
+td {
+    border: 1px solid rgb(237, 237, 237);
+}
+th {
+    background-color: rgb(38, 85, 150);
+    color: white;
+}
+/* Makes the databases scroll HORIZONTALLY */
+.db_holder {
+    background-color: rgb(237, 237, 237);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Home Page CSS ============================*/
+/* content box */
 .about_content {
     background-color: rgb(237, 237, 237);
     padding: 20px;
@@ -49,21 +87,71 @@
     border-radius: 10px;
 }
 
-.db_table {
-    width: 100%;
-    border-collapse: collapse;
+/* Explore Data Page CSS ============================*/
+/* Filter Content Box Styling */
+.filter_content {
+    background-color: rgb(237, 237, 237);
+    margin-top: 10px;
+    padding: 3px;
+    border-radius: 10px;
+    padding-left: 10px;
+}
+.filter_columns {
+  display: flex;
+  gap: 20px; 
+}
+.filt_col {
+  flex: 1; 
 }
 
-th, td {
+/* 
+Source for "Expand Collapse Section using HTML and CSS":
+https://www.youtube.com/watch?v=2cPKsxJcF9Y
+*/
+/* Content Expander CSS */
+.exp_label {
+    font-size: large;
+    background-color: #d7d6d6;
+    display: block;
+    cursor: pointer;
+    padding: 10px 10px 10px 30px;
+    position: relative;
+    font-weight: bold;
+}
+/* The arrow */
+.exp_label:before {
+    content: "";
+    border-width: 10px; 
+    border-style: solid;
+    border-color: transparent
+    transparent transparent black;
+    height: 0;
+    font-size: 0;
+    position: absolute;
+    top: 12px;
+    left: 10px;
+    transition: transform 0.25s;
+    transform-origin: 3px center;
+}
+.expanding {
+    border: 3px solid #8f8d8d;
+    border-radius: 3px;
+}
+.expanding .expanding_content {
+    height: 0px;
+    overflow: hidden;
+    opacity: 0;
+}
+#trigger {
+    display:none;
+}
+#trigger:checked ~ .exp_label:before {
+    transform: rotate(90deg);
+}
+#trigger:checked ~ .expanding_content {
+    opacity: 1;
+    height: auto;
     padding: 10px;
-    text-align: left;
 }
 
-td {
-    border: 1px solid rgb(237, 237, 237);
-}
-
-th {
-    background-color: #222;
-    color: white;
-}
+/* END referenced CSS */
