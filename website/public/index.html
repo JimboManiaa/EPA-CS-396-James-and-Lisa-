@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
+    <title>CAMPD Data Manager</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="content">
     <div class="title_container">
         <!-- Logo -->
-        <img src="logo.gif" id="logo">
+        <img src="logo.png" id="logo">
 
         <!-- Title -->
         <h1 id="site_title">CAMPD Data Manager</h1>
@@ -29,7 +29,29 @@
 
     <!-- The informative / "About" section --------------------------------->
      <div class="about_content">
-        <p>This box will display information related to CAMPD data. It will be an educational section which informs the reader on CAMPD data, how it is collected, and how it is relevant in society today.</p>
+        <p>
+            The Environmental Protection Agency (EPA) aims to protect both human and environmental health through the collection of Clean Air Markets Program Data (CAMPD). EPA collects a series of relevant, comprehensive data related to power plant emission in the United States, such as:
+        </p>
+        <ul>
+            <li>Emission data (CO2, NOx, SO2, and mercury)</li>
+            <li>Compliance data</li>
+            <li>Allowance data</li>
+        </ul>
+
+        <p>
+            EPA provides several free datasets which the public can utilize for research, data management, and pollution tracking. Through CAMPD, communities and citizens can track local pollution sources, monitor compliance with federal clean air laws, and use the public data to hold power companies accountable.
+        </p>
+
+<!-- test writing
+ EPA’s power plant programs reduce air pollution from power plants to help protect human health and the environment. EPA collects comprehensive CO2, NOx, SO2, and mercury emissions data, and makes it publicly available, along with compliance and allowance data, and individual power plant details. You can explore the data here in CAMPD. Learn more about our programs, additional data and tools at Clean Air Power Sector Programs.
+    
+ https://www.epa.gov/data
+ https://campd.epa.gov/
+ 
+ -->
+
+
+
     </div>
 
     <hr>
@@ -39,22 +61,27 @@
     <h2>Datasets Installed</h2>
 
     <!-- Datasets Section ----------------------------------------->
-    <table class="db_table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Publisher</th>
-                <th>Date Installed</th>
-                <th>Status</th>
-            </tr>
-        </thead>
+    
+    <div class="db_holder">
+        <table class="db_table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Facility</th>
+                    <th>Date Installed</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
 
-            <tbody id="tableBody">
-                <!-- JavaScript will put the rows here -->
-            </tbody>
+                <tbody id="tableBody">
+                    <!-- JavaScript will put the rows here -->
+                </tbody>
 
-        </table>
+            </table>
+    </div>
+
+    </div>
 
 <script>
 
@@ -64,14 +91,42 @@
         {
             id: 1,
             name: "name1",
-            publisher: "publisher1",
+            facility: "facility1",
             date: "xx-xx-xxxx",
             status: "active"
         },
         {
             id: 2,
             name: "name2",
-            publisher: "publisher2",
+            facility: "facility2",
+            date: "xx-xx-xxxx",
+            status: "active"
+        },
+                {
+            id: 0,
+            name: "nametest",
+            facility: "facilitytest",
+            date: "xx-xx-xxxx",
+            status: "active"
+        },
+                {
+            id: 0,
+            name: "nametest",
+            facility: "facilitytest",
+            date: "xx-xx-xxxx",
+            status: "active"
+        },
+                {
+            id: 0,
+            name: "nametest",
+            facility: "facilitytest",
+            date: "xx-xx-xxxx",
+            status: "active"
+        },
+                {
+            id: 0,
+            name: "nametest",
+            facility: "facilitytest",
             date: "xx-xx-xxxx",
             status: "active"
         }
@@ -92,7 +147,7 @@
             row.innerHTML = `
                 <td>${entry.id}</td>
                 <td>${entry.name}</td>
-                <td>${entry.publisher}</td>
+                <td>${entry.facility}</td>
                 <td>${entry.date}</td>
                 <td>${entry.status}</td>
             `;
