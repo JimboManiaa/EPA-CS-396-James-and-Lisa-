@@ -76,6 +76,7 @@
 
                 <tbody id="tableBody">
                     <!-- JavaScript will put the rows here -->
+
                 </tbody>
 
             </table>
@@ -87,51 +88,43 @@
 
     // Temporary data for designing the website.
     // Later, this will come from MySQL.
-    const mockData = [
-        {
-            id: 1,
-            name: "name1",
-            facility: "facility1",
-            date: "xx-xx-xxxx",
-            status: "active"
-        },
-        {
-            id: 2,
-            name: "name2",
-            facility: "facility2",
-            date: "xx-xx-xxxx",
-            status: "active"
-        },
-                {
-            id: 0,
-            name: "nametest",
-            facility: "facilitytest",
-            date: "xx-xx-xxxx",
-            status: "active"
-        },
-                {
-            id: 0,
-            name: "nametest",
-            facility: "facilitytest",
-            date: "xx-xx-xxxx",
-            status: "active"
-        },
-                {
-            id: 0,
-            name: "nametest",
-            facility: "facilitytest",
-            date: "xx-xx-xxxx",
-            status: "active"
-        },
-                {
-            id: 0,
-            name: "nametest",
-            facility: "facilitytest",
-            date: "xx-xx-xxxx",
-            status: "active"
-        }
+    async function loadDatabaseTable() {
+        const tableBody = document.getElementById("tableBody");
+        tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading live data from MySQL...</td></tr>`;
 
-    ];
+        try {
+            const response = await fetch('/api/datasets');
+            if (!response.ok) throw new Error('Failed to fetch data from server');
+            
+            const liveData = await response.json();
+            
+            tableBody.innerHTML = ""; // Clear loading message
+
+            if (liveData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No datasets installed yet.</td></tr>`;
+                return;
+            }
+
+            liveData.forEach(entry => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${entry.id}</td>
+                    <td>${entry.name}</td>
+                    <td>${entry.facility}</td>
+                    <td>${entry.date}</td>
+                    <td><span class="badge bg-success">${entry.status}</span></td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("Error loading table data:", error);
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-danger text-center">Error connecting to database backend.</td></tr>`;
+        }
+    }
+
+    // Load live data on page load
+    loadDatabaseTable();
 
 
     function displayTable(data) {
@@ -156,9 +149,6 @@
         });
     }
 
-
-    // Display our temporary data
-    displayTable(mockData);
 
 </script>
 
