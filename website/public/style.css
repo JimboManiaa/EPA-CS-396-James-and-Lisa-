@@ -16,7 +16,16 @@ body {
     height: 100%;
     padding-bottom: 50px;
 }
-
+/* Content Box Styling */
+.info_content {
+    background-color: rgb(237, 237, 237);
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    
+}
 /* Nav Bar CSS ==============================*/
 /* logo */
 .title_container {
@@ -90,16 +99,6 @@ th {
 }
 
 /* Explore Data Page CSS ============================*/
-/* Filter Content Box Styling */
-.filter_content {
-    background-color: rgb(237, 237, 237);
-    margin-top: 10px;
-    padding: 10px;
-    border-radius: 10px;
-    padding-left: 10px;
-    padding-right: 10px;
-    
-}
 .filter_columns {
   display: flex;
   gap: 20px; 
@@ -119,10 +118,6 @@ th {
     margin-bottom: 5px;
 
 }
-
-
-
-
 /* 
 Source for "Expand Collapse Section using HTML and CSS":
 https://www.youtube.com/watch?v=2cPKsxJcF9Y
@@ -172,9 +167,9 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
     height: auto;
     padding: 10px;
 }
-
 /* END referenced CSS */
 
+/* Explore Data Page CSS ============================*/
 
 
 
@@ -187,6 +182,12 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
 
 
 
+
+
+
+
+
+/* css i didnt do ! */
 
 .range_container {
   width: 80%;
