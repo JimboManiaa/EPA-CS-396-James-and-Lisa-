@@ -133,6 +133,28 @@ app.get('/api/download/:tableName', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate download file' });
   }
 });
+app.get('/api/retrieval-data', async (req, res) => {
+  try {
+    const facilities = await Facility.findAll({
+      raw: true
+      // No limit, so it brings back everything!
+    });
+
+    // Map them back to the exact same headers/keys you used before
+    const formattedData = facilities.map(fac => ({
+      id: fac.epa_facility_id,
+      name: fac.facility_name,
+      facility: fac.county ? `${fac.county} County (${fac.state})` : fac.state,
+      date: "2026-09-21",
+      status: "active"
+    }));
+
+    res.json(formattedData);
+  } catch (error) {
+    console.error("Database query failed:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 // 6. Start server and verify database connection
 async function startServer() {
