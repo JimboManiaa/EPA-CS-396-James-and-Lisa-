@@ -13,6 +13,8 @@ body {
     padding: 20px;
     width: 1000px;
     height: 100dvh;
+    height: 100%;
+    padding-bottom: 50px;
 }
 
 /* Nav Bar CSS ==============================*/
@@ -92,17 +94,34 @@ th {
 .filter_content {
     background-color: rgb(237, 237, 237);
     margin-top: 10px;
-    padding: 3px;
+    padding: 10px;
     border-radius: 10px;
     padding-left: 10px;
+    padding-right: 10px;
+    
 }
 .filter_columns {
   display: flex;
   gap: 20px; 
 }
 .filt_col {
-  flex: 1; 
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 460px;
 }
+
+#site-search {
+    width: 100%;
+    padding: 5px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+
+}
+
+
+
 
 /* 
 Source for "Expand Collapse Section using HTML and CSS":
@@ -155,3 +174,67 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
 }
 
 /* END referenced CSS */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.range_container {
+  width: 80%;
+  margin-top: 5px;
+}
+
+.sliders_control {
+  position: relative;
+  min-height: 20px;
+}
+
+.form_control {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  width: 17px;
+  height: 17px;
+  background-color: #8f8d8d;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+input[type=range]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background-color: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #C6C6C6;
+  cursor: pointer;  
+}
+
+input[type="range"] {
+  -webkit-appearance: none; 
+  appearance: none;
+  height: 2px;
+  width: 100%;
+  position: absolute;
+  background-color: #C6C6C6;
+  pointer-events: none;
+}
+
+#fromSlider {
+  height: 0;
+  z-index: 1;
+}
+
