@@ -85,8 +85,8 @@
                      <script>
                         fetch('/api/database-ids')
                             .then(response => response.json())
-                            .then(database => {
-                                const select = document.getElementByID('db_id');
+                            .then(databases => {
+                                const select = document.getElementById('db_id');
                                 databases.forEach(database => {
                                     const option = document.createElement('option');
 
@@ -120,7 +120,7 @@
                 </div>
 
                 <!-- Column 2 -->
-                <!-- MIDDLE COLUMN ===========================================-->     
+                <!-- MIDDLE COLUMN ===========================================-->    
                 <div class="filt_col">
                 
                     <!-- date from -->
@@ -270,7 +270,7 @@
     <div class="filter_content">
 
         <!-- Search Bar -->
-        <form role="search" action="/search" method="get">
+        <form role="search" id="search-form" onsubmit="return false;">
             <label for="site-search">Search the database:</label>
             <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
             <button type="submit">Search</button>
@@ -284,11 +284,12 @@
     
     <div class="db_holder">
         <table class="db_table">
-            <thead>
+            <thead id="tableHead">
                 <!-- JavaScript will populate the headers-->
             </thead>
             <tbody id="tableBody">
                 <!-- JavaScript will put the rows here -->
+
             </tbody>
         </table>
     </div>
@@ -297,16 +298,16 @@
 
 <script>
 
-    // Use JavaScript to retrieve the table data
+    // Use JavaScript to retrieve the table data and support live searching
     async function loadDatabaseTable() {
         const tableHead = document.getElementById("tableHead");
         const tableBody = document.getElementById("tableBody");
-
+        const searchInput = document.getElementById("site-search");
 
         tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading live data from MySQL...</td></tr>`;
 
         try {
-            const response = await fetch('/api/datasets');
+            const response = await fetch('/api/retrieval-data');
             
             if (!response.ok) throw new Error('Failed to fetch data from server');
             
@@ -324,30 +325,45 @@
             const columns = Object.keys(liveData[0]);
 
             // CREATE THE TABLE HEADERS ======================
+            tableHead.innerHTML = ""; // clear head if reloading
             const headerRow = document.createElement("tr");
             columns.forEach(column => {
-
                 const th = document.createElement("th");
                 th.textContent = formatColumnName(column);
                 headerRow.appendChild(th);
-
             });
             tableHead.appendChild(headerRow);
 
-            // CREATE THE TABLE ROWS ======================
+            // FUNCTION TO RENDER ROWS ======================
+            function renderRows(dataToRender) {
+                tableBody.innerHTML = "";
+                if (dataToRender.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="${columns.length}" class="text-center">No matching records found.</td></tr>`;
+                    return;
+                }
+                dataToRender.forEach(entry => {
+                    const row = document.createElement("tr");
+                    columns.forEach(column => {
+                        const cell = document.createElement("td");
+                        cell.textContent = entry[column] !== null ? entry[column] : "";
+                        row.appendChild(cell);
+                    });
+                    tableBody.appendChild(row);
+                });
+            }
 
-            tableBody.innerHTML = "";
+            // Initial render of all items
+            renderRows(liveData);
 
-            liveData.forEach(entry => {
-                const row = document.createElement("tr");
-                
-                columns.forEach(column => {
-                    const cell = document.createElement("td");
-                    cell.textContent = entry[column];
-                    row.appendChild(cell);
-                })
-
-                tableBody.appendChild(row);
+            // Enable searching/filtering through the rows instantly as you type
+            searchInput.addEventListener("input", (e) => {
+                const query = e.target.value.toLowerCase();
+                const filteredData = liveData.filter(entry => {
+                    return Object.values(entry).some(val => 
+                        val !== null && String(val).toLowerCase().includes(query)
+                    );
+                });
+                renderRows(filteredData);
             });
 
         } catch (error) {
@@ -358,57 +374,32 @@
 
 // Convert database column names into readable headers
 function formatColumnName(column) {
-
     return column
         .replace(/_/g, " ")
         .replace(/\b\w/g, letter => letter.toUpperCase());
 }
-
 
 // Load table when page loads
 loadDatabaseTable();
 
 </script>
 
-
-
-
-
-
-
-
-    </div>
-
-
-
-
-
-
-
-
-
-
-
-
-            
-
-
-    </div>
-
-
-    <script>
-
-        function expandList() {
-            document.getElementById("filter_button").style.height="400px";
-            document.getElementById("filter_button").style.transition="1s";
-        }
-
-
-    </script>
-
-
-
-
+<script>
+    fetch('/api/database-ids')
+        .then(response => response.json())
+        .then(databases => {
+            const select = document.getElementById('db_id');
+            if (select) {
+                databases.forEach(database => {
+                    const option = document.createElement('option');
+                    option.value = database.id;
+                    option.textContent = database.id;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching database IDs:', error));
+</script>
 
 </body>
 </html>
