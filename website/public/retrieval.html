@@ -35,10 +35,8 @@
 
     <!-- Filter Section ------------------------------------------------------>
 
-
-
         <!-- Source for "Expand Collapse Section using HTML and CSS":
-         https://www.youtube.com/watch?v=2cPKsxJcF9Y
+          https://www.youtube.com/watch?v=2cPKsxJcF9Y
         -->
         <!-- Expanding Section -->
         <div class="expanding">
@@ -62,48 +60,25 @@
                     <br>
 
                     <!-- facility name filter -->
-                    <label for="db_id">Facility Name:</label><br>
-                    <select id="db_id" name="db_id">
-                        <option>Select a facility name</option>
-                        <option>test 1</option>
-                        <option>test 2</option>
+                    <label for="facility_name_select">Facility Name:</label><br>
+                    <select id="facility_name_select" name="facility_name">
+                        <option value="">Select a facility name</option>
                     </select>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
                     <!-- database id filter -->
-                    <label for="db_id">Database ID:</label><br>
-                    <select id="db_id" name="db_id">
-                        <option>Select a database ID</option>
+                    <label for="db_id_select">Database ID:</label><br>
+                    <select id="db_id_select" name="db_id">
+                        <option value="">Select a database ID</option>
                     </select>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
-                    <!-- fetch the database IDs from the database -->
-                     <!-- ChatGPT used to create this script, which
-                      we will reference for future scripts that use node.js to call from the DB -->
-                     <script>
-                        fetch('/api/database-ids')
-                            .then(response => response.json())
-                            .then(database => {
-                                const select = document.getElementByID('db_id');
-                                databases.forEach(database => {
-                                    const option = document.createElement('option');
-
-                                    option.value = database.id;
-                                    option.textContent = database.id;
-
-                                    select.appendChild(option);
-                                });
-                            });
-                     </script>
-
-
-
                     <!-- Primary fuel type filter -->
                     <label for="p_fuel">Primary Fuel Type:</label><br>
                     <select id="p_fuel" name="p_fuel">
-                        <option>Select a fuel type</option>
+                        <option value="">Select a fuel type</option>
                     </select>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
@@ -111,7 +86,7 @@
                     <!-- Secondary fuel type filter -->
                     <label for="s_fuel">Secondary Fuel Type:</label><br>
                     <select id="s_fuel" name="s_fuel">
-                        <option>Select a fuel type</option>
+                        <option value="">Select a fuel type</option>
                     </select>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
@@ -120,68 +95,63 @@
                 </div>
 
                 <!-- Column 2 -->
-                <!-- MIDDLE COLUMN ===========================================-->     
+                <!-- MIDDLE COLUMN ===========================================-->    
                 <div class="filt_col">
                 
-                    <!-- date from -->
+                    <!-- date to -->
                     <label for="end">Date To:</label><br>
                     <!-- Date input field -->
-                    <input type="date" id="end" name="begin" value="" min="1997-01-01" max="2030-12-31">
+                    <input type="date" id="end" name="end" value="" min="1997-01-01" max="2030-12-31">
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
                     <!-- Program Code Filter -->
-                    <label for="db_id">Program Code:</label><br>
-                    <select id="db_id" name="db_id">
-                        <option>Select a code type</option>
+                    <label for="program_code_select">Program Code:</label><br>
+                    <select id="program_code_select" name="program_code">
+                        <option value="">Select a code type</option>
                     </select>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
                     <!-- Operating Time Slider -->
-                    <label for="op_time">Operating Time:</label><br>
-
-                    <!-- This code was referenced from Predrag Davidovic's guide posted to the website Medium
-                        https://medium.com/@predragdavidovic10/native-dual-range-slider-html-css-javascript-91e778134816-->
-                
+                    <label for="op_time_slider">Operating Time:</label><br>
                     <div class="range_container">
                         <div class="sliders_control">
-                        <input id="fromSlider" type="range" value="10" min="0" max="100"/>
-                        <input id="toSlider" type="range" value="40" min="0" max="100"/>
-                    </div>
+                            <input id="fromSlider_opTime" type="range" value="0" min="0" max="100"/>
+                            <input id="toSlider_opTime" type="range" value="100" min="0" max="100"/>
+                        </div>
 
-                    <div class="form_control">
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Min:</div>
-                            <input class="form_control_container__time__input" type="number" id="fromInput" value="10" min="0" max="100"/>
-                        </div>
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Max:</div>
-                            <input class="form_control_container__time__input" type="number" id="toInput" value="40" min="0" max="100"/>
-                        </div>
+                        <div class="form_control">
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Min:</div>
+                                <input class="form_control_container__time__input" type="number" id="fromInput_opTime" value="0" min="0" max="100"/>
+                            </div>
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Max:</div>
+                                <input class="form_control_container__time__input" type="number" id="toInput_opTime" value="100" min="0" max="100"/>
+                            </div>
                         </div>
                     </div>
-                    <!-- end referenced code -->
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
                     <!-- Gross Load Slider -->
-                    <label for="op_time">Gross Load (MWh):</label><br>
+                    <label for="gross_load_slider">Gross Load (MWh):</label><br>
                     <div class="range_container">
                         <div class="sliders_control">
-                        <input id="fromSlider" type="range" value="10" min="0" max="100"/>
-                        <input id="toSlider" type="range" value="40" min="0" max="100"/>
-                    </div>
+                            <input id="fromSlider_grossLoad" type="range" value="0" min="0" max="100"/>
+                            <input id="toSlider_grossLoad" type="range" value="100" min="0" max="100"/>
+                        </div>
 
-                    <div class="form_control">
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Min:</div>
-                            <input class="form_control_container__time__input" type="number" id="fromInput" value="10" min="0" max="100"/>
-                        </div>
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Max:</div>
-                            <input class="form_control_container__time__input" type="number" id="toInput" value="40" min="0" max="100"/>
-                        </div>
+                        <div class="form_control">
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Min:</div>
+                                <input class="form_control_container__time__input" type="number" id="fromInput_grossLoad" value="0" min="0" max="100"/>
+                            </div>
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Max:</div>
+                                <input class="form_control_container__time__input" type="number" id="toInput_grossLoad" value="100" min="0" max="100"/>
+                            </div>
                         </div>
                     </div>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
@@ -194,101 +164,99 @@
                 <div class="filt_col">
 
                     <!-- CO2 Mass Slider -->
-                    <label for="op_time">CO2 Mass (short tons):</label><br>
+                    <label for="co2_slider">CO2 Mass (short tons):</label><br>
                     <div class="range_container">
                         <div class="sliders_control">
-                        <input id="fromSlider" type="range" value="10" min="0" max="100"/>
-                        <input id="toSlider" type="range" value="40" min="0" max="100"/>
-                    </div>
+                            <input id="fromSlider_co2" type="range" value="0" min="0" max="100"/>
+                            <input id="toSlider_co2" type="range" value="100" min="0" max="100"/>
+                        </div>
 
-                    <div class="form_control">
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Min:</div>
-                            <input class="form_control_container__time__input" type="number" id="fromInput" value="10" min="0" max="100"/>
-                        </div>
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Max:</div>
-                            <input class="form_control_container__time__input" type="number" id="toInput" value="40" min="0" max="100"/>
-                        </div>
+                        <div class="form_control">
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Min:</div>
+                                <input class="form_control_container__time__input" type="number" id="fromInput_co2" value="0" min="0" max="100"/>
+                            </div>
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Max:</div>
+                                <input class="form_control_container__time__input" type="number" id="toInput_co2" value="100" min="0" max="100"/>
+                            </div>
                         </div>
                     </div>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
                     <!-- NOx Mass Slider -->
-                    <label for="op_time">NOx Mass (short tons):</label><br>
+                    <label for="nox_slider">NOx Mass (short tons):</label><br>
                     <div class="range_container">
                         <div class="sliders_control">
-                        <input id="fromSlider" type="range" value="10" min="0" max="100"/>
-                        <input id="toSlider" type="range" value="40" min="0" max="100"/>
-                    </div>
+                            <input id="fromSlider_nox" type="range" value="0" min="0" max="100"/>
+                            <input id="toSlider_nox" type="range" value="100" min="0" max="100"/>
+                        </div>
 
-                    <div class="form_control">
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Min:</div>
-                            <input class="form_control_container__time__input" type="number" id="fromInput" value="10" min="0" max="100"/>
-                        </div>
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Max:</div>
-                            <input class="form_control_container__time__input" type="number" id="toInput" value="40" min="0" max="100"/>
-                        </div>
+                        <div class="form_control">
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Min:</div>
+                                <input class="form_control_container__time__input" type="number" id="fromInput_nox" value="0" min="0" max="100"/>
+                            </div>
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Max:</div>
+                                <input class="form_control_container__time__input" type="number" id="toInput_nox" value="100" min="0" max="100"/>
+                            </div>
                         </div>
                     </div>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
-
 
                     <!-- SO2 Mass Slider -->
-                    <label for="op_time">SO2 Mass (short tons):</label><br>
+                    <label for="so2_slider">SO2 Mass (short tons):</label><br>
                     <div class="range_container">
                         <div class="sliders_control">
-                        <input id="fromSlider" type="range" value="10" min="0" max="100"/>
-                        <input id="toSlider" type="range" value="40" min="0" max="100"/>
-                    </div>
+                            <input id="fromSlider_so2" type="range" value="0" min="0" max="100"/>
+                            <input id="toSlider_so2" type="range" value="100" min="0" max="100"/>
+                        </div>
 
-                    <div class="form_control">
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Min:</div>
-                            <input class="form_control_container__time__input" type="number" id="fromInput" value="10" min="0" max="100"/>
-                        </div>
-                        <div class="form_control_container">
-                            <div class="form_control_container__time">Max:</div>
-                            <input class="form_control_container__time__input" type="number" id="toInput" value="40" min="0" max="100"/>
-                        </div>
+                        <div class="form_control">
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Min:</div>
+                                <input class="form_control_container__time__input" type="number" id="fromInput_so2" value="0" min="0" max="100"/>
+                            </div>
+                            <div class="form_control_container">
+                                <div class="form_control_container__time">Max:</div>
+                                <input class="form_control_container__time__input" type="number" id="toInput_so2" value="100" min="0" max="100"/>
+                            </div>
                         </div>
                     </div>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
+                </div>
             </div>
-        </div>
-        </div>
-        </div>
+            </div>
+            </div>
 
     <!-- end the filter expander-->
 
     <div class="info_content">
 
         <!-- Search Bar -->
-        <form role="search" action="/search" method="get">
+        <form role="search" id="search-form" onsubmit="return false;">
             <label for="site-search">Search the database:</label>
             <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
+            <button type="submit">Search</button>
         </form>
     </div>
 
     <hr>
     <br>
 
- <!-- Datasets Section ----------------------------------------->
-    
+    <!-- Datasets Section ----------------------------------------->
     <div class="db_holder">
         <table class="db_table">
-            <thead>
+            <thead id="tableHead">
                 <!-- JavaScript will populate the headers-->
             </thead>
             <tbody id="tableBody">
                 <!-- JavaScript will put the rows here -->
-
             </tbody>
         </table>
     </div>
@@ -296,59 +264,175 @@
     </div>
 
 <script>
+    // Initialize Dual Slider sync
+    function setupDualSlider(sliderFromId, sliderToId, inputFromId, inputToId, onUpdate) {
+        const fromSlider = document.getElementById(sliderFromId);
+        const toSlider = document.getElementById(sliderToId);
+        const fromInput = document.getElementById(inputFromId);
+        const toInput = document.getElementById(inputToId);
 
-    // Use JavaScript to retrieve the table data
+        if (!fromSlider || !toSlider || !fromInput || !toInput) return;
+
+        function controlFromSlider() {
+            const [from, to] = [parseInt(fromSlider.value, 10), parseInt(toSlider.value, 10)];
+            if (from > to) {
+                fromSlider.value = to;
+                fromInput.value = to;
+            } else {
+                fromInput.value = from;
+            }
+            if (onUpdate) onUpdate();
+        }
+
+        function controlToSlider() {
+            const [from, to] = [parseInt(fromSlider.value, 10), parseInt(toSlider.value, 10)];
+            if (from <= to) {
+                toSlider.value = to;
+                toInput.value = to;
+            } else {
+                toInput.value = from;
+                toSlider.value = from;
+            }
+            if (onUpdate) onUpdate();
+        }
+
+        function controlFromInput() {
+            const [from, to] = [parseInt(fromInput.value, 10), parseInt(toInput.value, 10)];
+            if (from > to) {
+                fromSlider.value = to;
+                fromInput.value = to;
+            } else {
+                fromSlider.value = from;
+            }
+            if (onUpdate) onUpdate();
+        }
+
+        function controlToInput() {
+            const [from, to] = [parseInt(fromInput.value, 10), parseInt(toInput.value, 10)];
+            if (from <= to) {
+                toSlider.value = to;
+                toInput.value = to;
+            } else {
+                toInput.value = from;
+                toSlider.value = from;
+            }
+            if (onUpdate) onUpdate();
+        }
+
+        fromSlider.addEventListener('input', controlFromSlider);
+        toSlider.addEventListener('input', controlToSlider);
+        fromInput.addEventListener('input', controlFromInput);
+        toInput.addEventListener('input', controlToInput);
+    }
+
+    // Populate dropdowns with options
+    async function loadFilterDropdowns() {
+        try {
+            const res = await fetch('/api/filter-options');
+            if (!res.ok) return;
+            const data = await res.json();
+
+            populateSelect('facility_name_select', data.facilityNames);
+            populateSelect('db_id_select', data.databaseIds);
+            populateSelect('p_fuel', data.primaryFuels);
+            populateSelect('s_fuel', data.secondaryFuels);
+            populateSelect('program_code_select', data.programCodes);
+        } catch (e) {
+            console.error("Error populating dropdowns:", e);
+        }
+    }
+
+    function populateSelect(id, items) {
+        const el = document.getElementById(id);
+        if (!el || !items) return;
+        items.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item;
+            opt.textContent = item;
+            el.appendChild(opt);
+        });
+    }
+
+    // Main fetch & render function
+    let currentData = [];
+
     async function loadDatabaseTable() {
         const tableHead = document.getElementById("tableHead");
         const tableBody = document.getElementById("tableBody");
 
-
         tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading live data from MySQL...</td></tr>`;
 
+        // Build query string from filter inputs
+        const params = new URLSearchParams();
+
+        const startDate = document.getElementById("start").value;
+        const endDate = document.getElementById("end").value;
+        const facilityName = document.getElementById("facility_name_select").value;
+        const dbId = document.getElementById("db_id_select").value;
+        const pFuel = document.getElementById("p_fuel").value;
+        const sFuel = document.getElementById("s_fuel").value;
+        const progCode = document.getElementById("program_code_select").value;
+
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (facilityName) params.append('facilityName', facilityName);
+        if (dbId) params.append('dbId', dbId);
+        if (pFuel) params.append('primaryFuel', pFuel);
+        if (sFuel) params.append('secondaryFuel', sFuel);
+        if (progCode) params.append('programCode', progCode);
+
+        // Sliders
+        const opTimeMin = document.getElementById("fromInput_opTime")?.value;
+        const opTimeMax = document.getElementById("toInput_opTime")?.value;
+        if (opTimeMin) params.append('minOpTime', opTimeMin);
+        if (opTimeMax) params.append('maxOpTime', opTimeMax);
+
+        const grossMin = document.getElementById("fromInput_grossLoad")?.value;
+        const grossMax = document.getElementById("toInput_grossLoad")?.value;
+        if (grossMin) params.append('minGrossLoad', grossMin);
+        if (grossMax) params.append('maxGrossLoad', grossMax);
+
+        const co2Min = document.getElementById("fromInput_co2")?.value;
+        const co2Max = document.getElementById("toInput_co2")?.value;
+        if (co2Min) params.append('minCO2', co2Min);
+        if (co2Max) params.append('maxCO2', co2Max);
+
+        const noxMin = document.getElementById("fromInput_nox")?.value;
+        const noxMax = document.getElementById("toInput_nox")?.value;
+        if (noxMin) params.append('minNOx', noxMin);
+        if (noxMax) params.append('maxNOx', noxMax);
+
+        const so2Min = document.getElementById("fromInput_so2")?.value;
+        const so2Max = document.getElementById("toInput_so2")?.value;
+        if (so2Min) params.append('minSO2', so2Min);
+        if (so2Max) params.append('maxSO2', so2Max);
+
         try {
-            const response = await fetch('/api/datasets');
-            
+            const response = await fetch(`/api/retrieval-data?${params.toString()}`);
             if (!response.ok) throw new Error('Failed to fetch data from server');
             
-            const liveData = await response.json();
+            currentData = await response.json();
             
-            tableBody.innerHTML = ""; // Clear loading message
+            tableBody.innerHTML = "";
 
-            // No data found
-            if (liveData.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No datasets installed yet.</td></tr>`;
+            if (currentData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No matching records found.</td></tr>`;
                 return;
             }
 
-            // get column names from the first database row
-            const columns = Object.keys(liveData[0]);
+            const columns = Object.keys(currentData[0]);
 
-            // CREATE THE TABLE HEADERS ======================
-            cont headerRow = document.createElement("tr");
+            // Create table headers
+            tableHead.innerHTML = "";
+            const headerRow = document.createElement("tr");
             columns.forEach(column => {
-
                 const th = document.createElement("th");
                 th.textContent = formatColumnName(column);
                 headerRow.appendChild(th);
-
             });
             tableHead.appendChild(headerRow);
 
-            // CREATE THE TABLE ROWS ======================
-
-            tableBody.innerHTML = "";
-
-            liveData.forEach(entry => {
-                const row = document.createElement("tr");
-                
-                columns.forEach(column => {
-                    const cell = document.createElement("td");
-                    cell.textContent = entry[column];
-                    row.appendChild(cell);
-                })
-
-                tableBody.appendChild(row);
-            });
+            renderRows(currentData, columns);
 
         } catch (error) {
             console.error("Error loading table data:", error);
@@ -356,59 +440,75 @@
         }
     }
 
-// Convert database column names into readable headers
-function formatColumnName(column) {
-
-    return column
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, letter => letter.toUpperCase());
-}
-
-
-// Load table when page loads
-loadDatabaseTable();
-
-</script>
-
-
-
-
-
-
-
-
-    </div>
-
-
-
-
-
-
-
-
-
-
-
-
-            
-
-
-    </div>
-
-
-    <script>
-
-        function expandList() {
-            document.getElementById("filter_button").style.height="400px";
-            document.getElementById("filter_button").style.transition="1s";
+    function renderRows(dataToRender, columns) {
+        const tableBody = document.getElementById("tableBody");
+        tableBody.innerHTML = "";
+        if (dataToRender.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="${columns.length}" class="text-center">No matching records found.</td></tr>`;
+            return;
         }
+        dataToRender.forEach(entry => {
+            const row = document.createElement("tr");
+            columns.forEach(column => {
+                const cell = document.createElement("td");
+                cell.textContent = entry[column] !== null ? entry[column] : "";
+                row.appendChild(cell);
+            });
+            tableBody.appendChild(row);
+        });
+    }
 
+    function formatColumnName(column) {
+        return column
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, letter => letter.toUpperCase());
+    }
 
-    </script>
+    // Attach listeners on load
+    document.addEventListener("DOMContentLoaded", () => {
+        loadFilterDropdowns();
+        loadDatabaseTable();
 
+        // Attach reload on input changes
+        const changeElements = [
+            'start', 'end', 
+            'facility_name_select', 'db_id_select', 
+            'p_fuel', 's_fuel', 'program_code_select'
+        ];
+        changeElements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', loadDatabaseTable);
+        });
 
+        // Initialize all 5 dual sliders
+        setupDualSlider('fromSlider_opTime', 'toSlider_opTime', 'fromInput_opTime', 'toInput_opTime', loadDatabaseTable);
+        setupDualSlider('fromSlider_grossLoad', 'toSlider_grossLoad', 'fromInput_grossLoad', 'toInput_grossLoad', loadDatabaseTable);
+        setupDualSlider('fromSlider_co2', 'toSlider_co2', 'fromInput_co2', 'toInput_co2', loadDatabaseTable);
+        setupDualSlider('fromSlider_nox', 'toSlider_nox', 'fromInput_nox', 'toInput_nox', loadDatabaseTable);
+        setupDualSlider('fromSlider_so2', 'toSlider_so2', 'fromInput_so2', 'toInput_so2', loadDatabaseTable);
 
+        // Instant text search filter
+        const searchInput = document.getElementById("site-search");
+        const searchForm = document.getElementById("search-form");
+        
+        searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase();
+            if (!currentData || currentData.length === 0) return;
+            const columns = Object.keys(currentData[0]);
+            const filtered = currentData.filter(entry => 
+                Object.values(entry).some(val => 
+                    val !== null && String(val).toLowerCase().includes(query)
+                )
+            );
+            renderRows(filtered, columns);
+        });
 
+        searchForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            loadDatabaseTable();
+        });
+    });
+</script>
 
 </body>
 </html>
