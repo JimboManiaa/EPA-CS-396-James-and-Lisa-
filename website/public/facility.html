@@ -3,11 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Data</title>
+    <title>Facilities</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
 </head>
 <body>
-    
-    <p>This is the Facility page.</p>
+
+    <!-- Styles ALL content -->
+    <div class="content">
+
+    <div class="title_container">
+        <!-- Logo -->
+        <img src="logo.png" id="logo">
+
+        <!-- Title -->
+        <h1 id="site_title">CAMPD Data Manager</h1>
+    </div>    
+
+    <!-- The nav bar ------------------------------------------------------>
+    <table class="nav_bar">
+        <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
+        <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
+        <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
+        <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
+        <td class="nav_cell"><a href="download.html">Download Data</a></td>
+        <td class="nav_cell"><a href="facility.html">Facility</a></td>
+    </table>
+
+    <!-- Content begins here -->
+
+    <h2>List of Facilities</h2>
+    <hr>
+
+    <div class="about_content">
+        <p>
+            The Environmental Protection Agency (EPA) provides detailed information about power plant facilities across the United States.
+            Facilities must follow a set of rules to keep the air, water, and land clean.
+            In cooperation with EPA, the Facility Registry Service (FRS) shares this recorded information with governments, businesses, and the public so that citizens can learn about their area.
+        </p>
+
+    <br>
+    <hr>
+
+    <h2>Highlighted Facilities</h2>
+    <!-- Facility #1 -->
+    <div class="sub_content">
+        
+        <img class="fac_img" src="jk_smith.png">
+        
+        <h3>Smith Generating Facility</h2>            
+            <p>
+                J.K. Smith is a power facility in Clark County, Kentucky, which is powered by natural gas.
+                The facility is registered as EIA Plant ID 54; East Kentucky Power Cooperative Inc.is the public owner and plant operator.
+                <i>(Ask the Grid) </i>
+            </p>
+    </div>
+
+
+    <br>
+    <!-- Facility #2 -->
+    <div class="sub_content">
+        
+        <img class="fac_img" src="hl_spurlock.png">
+        
+        <h3>H. L. Spurlock</h2>            
+            <p>
+                H. L. Spurlock is a coal-fired power facility in Mason County, Kentucky. The plant is registered as EIA plant ID 6041.
+                East Kentucky Power Cooperative Inc. is registered as the owner and plant entity/operator.
+                <i>(Ask the Grid) </i>
+            </p>
+    </div>
+
+</div>
+<hr>
+
+    <!-- Table of facilities -->
+  <h2>Facilities Installed</h2>
+
+  
+    <!-- Datasets Section ----------------------------------------->
+
+<div class="db_holder">
+        <table class="db_table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Facility Name</th>
+                </tr>
+            </thead>
+
+                <tbody id="tableBody">
+                    <!-- JavaScript will put the rows here -->
+
+                </tbody>
+
+            </table>
+    </div>
+
+<!-- JS to connect the website to the database ===================== -->
+<script>
+
+    // Temporary data for designing the website.
+    // Later, this will come from MySQL.
+    async function loadDatabaseTable() {
+        const tableBody = document.getElementById("tableBody");
+        tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading live data from MySQL...</td></tr>`;
+
+        try {
+            const response = await fetch('/api/datasets');
+            if (!response.ok) throw new Error('Failed to fetch data from server');
+            
+            const liveData = await response.json();
+            
+            tableBody.innerHTML = ""; // Clear loading message
+
+            if (liveData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No datasets installed yet.</td></tr>`;
+                return;
+            }
+
+            liveData.forEach(entry => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${entry.id}</td>
+                    <td>${entry.facility}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("Error loading table data:", error);
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-danger text-center">Error connecting to database backend.</td></tr>`;
+        }
+    }
+
+    // Load live data on page load
+    loadDatabaseTable();
+
+
+    function displayTable(data) {
+
+        const tableBody = document.getElementById("tableBody");
+
+        tableBody.innerHTML = "";
+
+        data.forEach(entry => {
+
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${entry.id}</td>
+                <td>${entry.facility}</td>
+            `;
+
+            tableBody.appendChild(row);
+        });
+    }
+
+
+</script>
+<!-- END JS ============================================= -->
 
 </body>
 </html>
