@@ -24,8 +24,15 @@ body {
     border-radius: 10px;
     padding-left: 10px;
     padding-right: 10px;
-    
 }
+
+/* Sub-content Box */
+.sub_content {
+    background-color: rgb(210, 210, 210); 
+    padding: 10px;
+    border-radius: 10px;
+}
+
 /* Nav Bar CSS ==============================*/
 /* logo */
 .title_container {
@@ -169,8 +176,15 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
 }
 /* END referenced CSS */
 
-/* Explore Data Page CSS ============================*/
-
+/* Faculty Page CSS ============================*/
+.fac_img {
+    width: 250px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 10px;
+    float: left;
+    margin-right: 15px;
+}
 
 
 
