@@ -77,10 +77,16 @@
 </div>
 <hr>
 
-    <!-- Table of facilities -->
-  <h2>Facilities Installed</h2>
+<br>
+    <!-- Search Bar -->
+    <form role="search" id="search-form" onsubmit="return false;">
+        <label for="site-search">Search the database:</label>
+        <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
+    </form>
 
-  
+    <!-- Table of facilities -->
+    <h2>Facilities Installed</h2>
+
     <!-- Datasets Section ----------------------------------------->
 
 <div class="db_holder">
@@ -159,6 +165,34 @@
             tableBody.appendChild(row);
         });
     }
+
+
+// Search Bar Functionality ===================================
+
+// Instant text search filter
+const searchInput = document.getElementById("site-search");
+const searchForm = document.getElementById("search-form");
+
+searchInput.addEventListener("input", (e) => {
+    const query = e.target.value.toLowerCase();
+
+    if (!currentData || currentData.length === 0) return;
+
+    const columns = Object.keys(currentData[0]);
+
+    const filtered = currentData.filter(entry => 
+        Object.values(entry).some(val => 
+            val !== null && String(val).toLowerCase().includes(query)
+        )
+    );
+
+    renderRows(filtered, columns);
+});
+
+searchForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    loadDatabaseTable();
+});
 
 
 </script>
