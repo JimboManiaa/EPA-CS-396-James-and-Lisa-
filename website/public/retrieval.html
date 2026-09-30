@@ -55,7 +55,8 @@
                     <!-- date from -->
                     <label for="start">Date From:</label><br>
                     <!-- Date input field -->
-                    <input type="date" id="start" name="begin" value="" min="1997-01-01" max="2030-12-31">
+                    <!-- Date From -->
+                      <input type="date" id="start" name="begin" value="2000-01-01" min="1997-01-01" max="2030-12-31">
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
@@ -101,7 +102,7 @@
                     <!-- date to -->
                     <label for="end">Date To:</label><br>
                     <!-- Date input field -->
-                    <input type="date" id="end" name="end" value="" min="1997-01-01" max="2030-12-31">
+                    <input type="date" id="end" name="end" value="2030-12-31" min="1997-01-01" max="2030-12-31">
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
@@ -382,30 +383,26 @@
         if (progCode) params.append('programCode', progCode);
 
         // Sliders
-        const opTimeMin = document.getElementById("fromInput_opTime")?.value;
-        const opTimeMax = document.getElementById("toInput_opTime")?.value;
-        if (opTimeMin) params.append('minOpTime', opTimeMin);
-        if (opTimeMax) params.append('maxOpTime', opTimeMax);
-
+        // Sliders: only send if modified from default 0 / 100
         const grossMin = document.getElementById("fromInput_grossLoad")?.value;
         const grossMax = document.getElementById("toInput_grossLoad")?.value;
-        if (grossMin) params.append('minGrossLoad', grossMin);
-        if (grossMax) params.append('maxGrossLoad', grossMax);
+        if (grossMin && Number(grossMin) > 0) params.append('minGrossLoad', grossMin);
+        if (grossMax && Number(grossMax) < 100) params.append('maxGrossLoad', grossMax);
 
         const co2Min = document.getElementById("fromInput_co2")?.value;
         const co2Max = document.getElementById("toInput_co2")?.value;
-        if (co2Min) params.append('minCO2', co2Min);
-        if (co2Max) params.append('maxCO2', co2Max);
+        if (co2Min && Number(co2Min) > 0) params.append('minCO2', co2Min);
+        if (co2Max && Number(co2Max) < 100) params.append('maxCO2', co2Max);
 
         const noxMin = document.getElementById("fromInput_nox")?.value;
         const noxMax = document.getElementById("toInput_nox")?.value;
-        if (noxMin) params.append('minNOx', noxMin);
-        if (noxMax) params.append('maxNOx', noxMax);
+        if (noxMin && Number(noxMin) > 0) params.append('minNOx', noxMin);
+        if (noxMax && Number(noxMax) < 100) params.append('maxNOx', noxMax);
 
         const so2Min = document.getElementById("fromInput_so2")?.value;
         const so2Max = document.getElementById("toInput_so2")?.value;
-        if (so2Min) params.append('minSO2', so2Min);
-        if (so2Max) params.append('maxSO2', so2Max);
+        if (so2Min && Number(so2Min) > 0) params.append('minSO2', so2Min);
+        if (so2Max && Number(so2Max) < 100) params.append('maxSO2', so2Max);
 
         try {
             const response = await fetch(`/api/retrieval-data?${params.toString()}`);
