@@ -3,43 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload</title>
+    <title>Upload Data</title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
 </head>
 <body>
-
-    <!-- Styles ALL content -->
     <div class="content">
+        <div class="title_container">
+            <img src="logo.png" id="logo" alt="Logo">
+            <h1 id="site_title">CAMPD Data Manager</h1>
+        </div>    
 
-    <div class="title_container">
-        <!-- Logo -->
-        <img src="logo.png" id="logo">
+        <table class="nav_bar">
+            <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home" alt="Home"></a></td>
+            <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
+            <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
+            <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
+            <td class="nav_cell"><a href="download.html">Download Data</a></td>
+            <td class="nav_cell"><a href="facility.html">Facility</a></td>
+        </table>
 
-        <!-- Title -->
-        <h1 id="site_title">CAMPD Data Manager</h1>
-    </div>    
+        <h2>Upload Emissions Data (CSV)</h2>
+        <hr>
 
-    <!-- The nav bar ------------------------------------------------------>
-    <table class="nav_bar">
-        <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
-        <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
-        <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
-        <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
-        <td class="nav_cell"><a href="download.html">Download Data</a></td>
-        <td class="nav_cell"><a href="facility.html">Facility</a></td>
-    </table>
-
-    <!-- Content begins here -->
-
-    <h2>Upload Data</h2>
-    <hr>
-
-    <div class="info_content">
-        <p>text</p>
+        <div class="info_content">
+            <form id="uploadForm">
+                <label for="csvfile">Select a CSV file to upload into the database:</label><br><br>
+                <input type="file" id="csvfile" name="csvfile" accept=".csv" required>
+                <br><br>
+                <button type="submit" style="padding: 10px 20px; cursor: pointer;">Upload Data</button>
+            </form>
+            <p id="upload-status" style="font-weight: bold; margin-top: 15px;"></p>
+        </div>
     </div>
 
-</div>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusText = document.getElementById('upload-status');
+            const fileInput = document.getElementById('csvfile');
+            
+            if (!fileInput.files[0]) return;
 
+            const formData = new FormData();
+            formData.append('csvfile', fileInput.files[0]);
+
+            statusText.textContent = "Uploading and processing...";
+            statusText.style.color = "black";
+
+            try {
+                const response = await fetch('/api/upload-csv', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusText.textContent = "✅ " + result.message;
+                    statusText.style.color = "green";
+                    fileInput.value = ""; 
+                } else {
+                    statusText.textContent = "❌ Error: " + result.error;
+                    statusText.style.color = "red";
+                }
+            } catch (error) {
+                console.error("Upload error:", error);
+                statusText.textContent = "❌ Connection error during upload.";
+                statusText.style.color = "red";
+            }
+        });
+    </script>
 </body>
 </html>
