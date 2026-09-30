@@ -114,7 +114,7 @@ th {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   height: 460px;
 }
 
@@ -175,6 +175,32 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
     padding: 10px;
 }
 /* END referenced CSS */
+
+/* Upload Page CSS ============================*/
+#file_img {
+    width: 100px;
+    height: 100px;
+    display: block;      
+    margin-right: auto;   
+    margin-left: 50px;
+}
+#up_butt {
+    padding: 10px 20px; 
+    cursor: pointer;
+    width: 200px;
+}
+.upload_subcontent {
+    background-color: rgb(223, 221, 221); 
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 10px;
+    display: grid;
+    place-content: center;
+
+
+}
+
+
 
 /* Faculty Page CSS ============================*/
 .fac_img {
@@ -253,3 +279,20 @@ input[type="range"] {
   z-index: 1;
 }
 
+.filt_col select, 
+.filt_col input[type="date"] {
+    width: 90%;
+    max-width: 180px; 
+    box-sizing: border-box;
+    padding: 3px;
+}
+
+.filt_col select {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; 
+}
+
+.range_container {
+    max-width: 180px;
+}
