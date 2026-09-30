@@ -107,7 +107,7 @@ th {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   height: 460px;
 }
 
@@ -237,5 +237,22 @@ input[type="range"] {
 #fromSlider {
   height: 0;
   z-index: 1;
+}
+.filt_col select, 
+.filt_col input[type="date"] {
+    width: 90%;
+    max-width: 180px; 
+    box-sizing: border-box;
+    padding: 3px;
+}
+
+.filt_col select {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; 
+}
+
+.range_container {
+    max-width: 180px;
 }
 
