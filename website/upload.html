@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Data</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Styles ALL content -->
+    <div class="content">
+        <div class="title_container">
+            <!-- Logo -->
+            <img src="logo.png" id="logo" alt="Logo">
+            <!-- Title -->
+            <h1 id="site_title">CAMPD Data Manager</h1>
+        </div>    
+
+        <!-- The nav bar ------------------------------------------------------>
+        <table class="nav_bar">
+            <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home" alt="Home"></a></td>
+            <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
+            <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
+            <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
+            <td class="nav_cell"><a href="download.html">Download Data</a></td>
+            <td class="nav_cell"><a href="facility.html">Facility</a></td>
+        </table>
+
+        <!-- Content begins here -->
+
+        <h2>Upload Emissions Data</h2>
+        <hr>
+
+        <div class="about_content">
+
+            <p>
+                Across the internet, there may be a wide variety of credible sources of CAMPD data.
+                This page of our site provides an import feature, so that you may analyze and explore your own set of CAMPD data.
+                
+            </p>
+        </div>
+
+        <div class="upload_subcontent">
+
+            <form id="uploadForm">
+                <label for="csvfile"><b>Import a dataset here:</b>
+                    <br><i>Accepted formats: .csv, .xlsx</i>
+                </label>
+                <br><br>
+
+                <img id="file_img" src="blue_file.png">
+                <br>
+
+                <input type="file" id="csvfile" name="csvfile" accept=".csv,.xlsx" required>
+                <br><br>
+                
+                <button type="submit" id="up_butt">Upload Data</button>
+            </form>
+
+            <p id="upload-status" style="font-weight: bold; margin-top: 15px;"></p>
+        </div>
+        
+    </div>
+
+    <!-- JS to import a file -->
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusText = document.getElementById('upload-status');
+            const fileInput = document.getElementById('csvfile');
+            
+            if (!fileInput.files[0]) return;
+
+            const formData = new FormData();
+            formData.append('csvfile', fileInput.files[0]);
+
+            statusText.textContent = "Uploading and processing...";
+            statusText.style.color = "black";
+            statusText.style.backgroundColor = "white";
+
+            try {
+                const response = await fetch('/api/upload-csv', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusText.textContent = "Approved!: " + result.message;
+                    statusText.style.color = "green";
+                    statusText.style.backgroundColor = "white";
+                    fileInput.value = ""; 
+                } else {
+                    statusText.textContent = "ERROR!: " + result.error;
+                    statusText.style.color = "red";
+                    statusText.style.backgroundColor = "white";
+                }
+            } catch (error) {
+                console.error("Upload error:", error);
+                statusText.textContent = "ERROR!: Connection error during upload.";
+                statusText.style.color = "red";
+                statusText.style.backgroundColor = "white";
+            }
+        });
+    </script>
+</body>
+</html>
