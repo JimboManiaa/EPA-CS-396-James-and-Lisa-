@@ -7,12 +7,17 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <!-- Styles ALL content -->
     <div class="content">
         <div class="title_container">
+            <!-- Logo -->
             <img src="logo.png" id="logo" alt="Logo">
+            <!-- Title -->
             <h1 id="site_title">CAMPD Data Manager</h1>
         </div>    
 
+        <!-- The nav bar ------------------------------------------------------>
         <table class="nav_bar">
             <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home" alt="Home"></a></td>
             <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
@@ -22,19 +27,43 @@
             <td class="nav_cell"><a href="facility.html">Facility</a></td>
         </table>
 
-        <h2>Upload Emissions Data (CSV)</h2>
+        <!-- Content begins here -->
+
+        <h2>Upload Emissions Data</h2>
         <hr>
 
-        <div class="info_content">
+        <div class="about_content">
+
+            <p>
+                Across the internet, there may be a wide variety of credible sources of CAMPD data.
+                This page of our site provides an import feature, so that you may analyze and explore your own set of CAMPD data.
+                
+            </p>
+        </div>
+
+        <div class="upload_subcontent">
+
             <form id="uploadForm">
-                <label for="csvfile">Select a CSV file to upload into the database:</label><br><br>
-                <input type="file" id="csvfile" name="csvfile" accept=".csv" required>
+                <label for="csvfile"><b>Import a dataset here:</b>
+                    <br><i>Accepted formats: .csv, .xlsx</i>
+                </label>
                 <br><br>
-                <button type="submit" style="padding: 10px 20px; cursor: pointer;">Upload Data</button>
+
+                <img id="file_img" src="blue_file.png">
+                <br>
+
+                <input type="file" id="csvfile" name="csvfile" accept=".csv,.xlsx" required>
+                <br><br>
+                
+                <button type="submit" id="up_butt">Upload Data</button>
             </form>
+
             <p id="upload-status" style="font-weight: bold; margin-top: 15px;"></p>
         </div>
+        
     </div>
+
+    <!-- JS to import a file -->
 
     <script>
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
@@ -49,6 +78,7 @@
 
             statusText.textContent = "Uploading and processing...";
             statusText.style.color = "black";
+            statusText.style.backgroundColor = "white";
 
             try {
                 const response = await fetch('/api/upload-csv', {
@@ -59,17 +89,20 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    statusText.textContent = "✅ " + result.message;
+                    statusText.textContent = "Approved!: " + result.message;
                     statusText.style.color = "green";
+                    statusText.style.backgroundColor = "white";
                     fileInput.value = ""; 
                 } else {
-                    statusText.textContent = "❌ Error: " + result.error;
+                    statusText.textContent = "ERROR!: " + result.error;
                     statusText.style.color = "red";
+                    statusText.style.backgroundColor = "white";
                 }
             } catch (error) {
                 console.error("Upload error:", error);
-                statusText.textContent = "❌ Connection error during upload.";
+                statusText.textContent = "ERROR!: Connection error during upload.";
                 statusText.style.color = "red";
+                statusText.style.backgroundColor = "white";
             }
         });
     </script>
