@@ -12,6 +12,10 @@ import {
 } from './node_models.mjs';
 import multer from 'multer';
 import fs from 'fs';
+import { GoogleGenAI } from '@google/genai';
+
+// Initialize Gemini client (automatically uses process.env.GEMINI_API_KEY)
+const ai = new GoogleGenAI();
 
 // Configure multer to save files to an 'uploads' directory
 const upload = multer({ dest: 'uploads/' });
@@ -280,7 +284,103 @@ app.get('/api/download/:tableName', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate download file' });
   }
 });
+// 10. API Route for AI Assisted Search (Using Google Gemini)
+app.get('/api/assisted-search', async (req, res) => {
+    try {
+        const userPrompt = req.query.q;
+        if (!userPrompt) return res.status(400).json({ error: "Query is required" });
 
+        // 1. Send the prompt to Gemini and force a JSON output structure
+        const response = await ai.models.generateContent({
+            model: "gemini-3.7-flash",
+            contents: `Convert this user search into a JSON filter object: "${userPrompt}"`,
+            config: {
+                systemInstruction: `You extract filters from power plant data searches. Return ONLY a valid JSON object.
+Use these keys if the data is present in the search:
+- "year" (integer, e.g., 2024)
+- "state" (2-letter uppercase US state abbreviation, e.g., "KY")
+- "fuel" (string, strictly "Coal" or "Pipeline Natural Gas")
+
+If a filter is not mentioned, DO NOT include the key in the JSON.`,
+                responseMimeType: "application/json"
+            }
+        });
+
+        // 2. Parse the AI's JSON output
+        const filters = JSON.parse(response.text);
+        console.log("Gemini Extracted Filters:", filters); // Check your terminal to see the AI's logic!
+
+        // 3. Map the AI filters directly to your Sequelize logic
+        const facilityWhere = {};
+        const unitWhere = {};
+        const emissionsWhere = {};
+
+        if (filters.year) emissionsWhere.reporting_year = filters.year;
+        if (filters.state) facilityWhere.state = filters.state;
+        if (filters.fuel) unitWhere.primary_fuel = filters.fuel;
+
+        const hasFacilityFilter = Object.keys(facilityWhere).length > 0;
+        const hasUnitFilter = Object.keys(unitWhere).length > 0;
+        const hasEmissionFilter = Object.keys(emissionsWhere).length > 0;
+
+        // 4. Run the dynamic Sequelize Query
+        const facilities = await Facility.findAll({
+            where: hasFacilityFilter ? facilityWhere : undefined,
+            include: [
+                {
+                    model: Unit,
+                    required: hasUnitFilter || hasEmissionFilter,
+                    where: hasUnitFilter ? unitWhere : undefined,
+                    include: [
+                        {
+                            model: AnnualRecord,
+                            required: hasEmissionFilter,
+                            where: hasEmissionFilter ? emissionsWhere : undefined
+                        }
+                    ]
+                }
+            ],
+            limit: 250
+        });
+
+        // 5. Flatten the filtered results for the frontend table
+        const flatData = [];
+        facilities.forEach(fac => {
+            fac.Units.forEach(unit => {
+                if (unit.AnnualRecords && unit.AnnualRecords.length > 0) {
+                    unit.AnnualRecords.forEach(record => {
+                        flatData.push({
+                            "Facility Name": fac.facility_name,
+                            "EPA ID": fac.epa_facility_id,
+                            "State": fac.state,
+                            "Unit ID": unit.epa_unit_id,
+                            "Unit Type": unit.unit_type || "N/A",
+                            "Primary Fuel": unit.primary_fuel || "N/A",
+                            "Reporting Year": record.reporting_year,
+                            "Gross Load (MWh)": record.gross_load ?? 0,
+                            "CO2 (tons)": record.co2_mass ?? 0,
+                            "NOx (tons)": record.nox_mass ?? 0,
+                            "SO2 (tons)": record.so2_mass ?? 0
+                        });
+                    });
+                }
+            });
+        });
+
+        // 6. Sort results alphabetically, then by Year descending
+        flatData.sort((a, b) => {
+            if (a["Facility Name"] !== b["Facility Name"]) {
+                return a["Facility Name"].localeCompare(b["Facility Name"]);
+            }
+            return b["Reporting Year"] - a["Reporting Year"];
+        });
+
+        res.json(flatData);
+    } catch (error) {
+        console.error("Assisted search failed:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 // 9. API Route for CSV Uploads (Annual Data Mapped to Project Specs)
 app.post('/api/upload-csv', upload.single('csvfile'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
