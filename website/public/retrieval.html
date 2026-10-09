@@ -92,7 +92,7 @@
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
 
 
-                    <button type="reset">Clear Filters</button>
+                   <button type="button" id="clear-filters-btn">Clear Filters</button>
 
                 <!-- End left column -->
                 </div>
@@ -252,23 +252,22 @@
         </form>
     </div>
 
-    <!-- FANCY SEARCH ======================================-->
+  <!-- FANCY SEARCH ======================================-->
     <div class="info_content">
 
         <label class="search_label">Assisted Search</label>
 
-        <!-- BASIC Search Bar -->
-        <form role="search" id="search-form" onsubmit="return false;">
+        <!-- ASSISTED Search Bar -->
+        <form role="search" id="assisted-search-form">
             <p>
                 The Assisted Search is useful for scenarios in which you are looking for data, but have no specifics regarding the dataset.<br>
                 Ex.: "Find coal units in Kentucky with high CO2 emissions."
             </p>
-            <label for="site-search">Search the database:</label>
-            <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
+            <label for="assisted-search-input">Search the database:</label>
+            <input type="search" id="assisted-search-input" name="q" placeholder="Type here to search..." required>
             <button type="submit">Search</button>
         </form>
     </div>
-
     <hr>
     <br>
 
@@ -287,6 +286,55 @@
     </div>
 
 <script>
+    const assistedForm = document.getElementById("assisted-search-form");
+    const assistedInput = document.getElementById("assisted-search-input");
+
+   // Assisted Search Functionality
+    document.addEventListener("DOMContentLoaded", () => {
+        const assistedForm = document.getElementById("assisted-search-form");
+        const assistedInput = document.getElementById("assisted-search-input");
+
+        if (assistedForm && assistedInput) {
+            assistedForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const query = assistedInput.value.trim();
+                if (!query) return;
+
+                const tableBody = document.getElementById("tableBody");
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center">AI is analyzing your request...</td></tr>`;
+
+                try {
+                    const response = await fetch(`/api/assisted-search?q=${encodeURIComponent(query)}`);
+                    if (!response.ok) throw new Error('AI search failed');
+
+                    const results = await response.json();
+                    currentData = results; // Update your global data array
+
+                    if (results.length > 0) {
+                        const columns = Object.keys(results[0]);
+                        
+                        // Rebuild table headers dynamically if needed
+                        const tableHead = document.getElementById("tableHead");
+                        tableHead.innerHTML = "";
+                        const headerRow = document.createElement("tr");
+                        columns.forEach(column => {
+                            const th = document.createElement("th");
+                            th.textContent = formatColumnName(column);
+                            headerRow.appendChild(th);
+                        });
+                        tableHead.appendChild(headerRow);
+
+                        renderRows(results, columns);
+                    } else {
+                        tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No matching records found via AI search.</td></tr>`;
+                    }
+                } catch (error) {
+                    console.error("Assisted Search error:", error);
+                    tableBody.innerHTML = `<tr><td colspan="5" class="text-danger text-center">Error processing AI assisted search.</td></tr>`;
+                }
+            });
+        }
+    });
     // Initialize Dual Slider sync
     function setupDualSlider(sliderFromId, sliderToId, inputFromId, inputToId, onUpdate) {
         const fromSlider = document.getElementById(sliderFromId);
