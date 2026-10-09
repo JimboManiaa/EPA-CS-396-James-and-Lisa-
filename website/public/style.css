@@ -129,7 +129,7 @@ th {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  height: 460px;
+  height: 500px;
 }
 
 #site-search {
@@ -137,7 +137,6 @@ th {
     padding: 5px;
     margin-top: 5px;
     margin-bottom: 5px;
-
 }
 /* 
 Source for "Expand Collapse Section using HTML and CSS":
@@ -189,6 +188,13 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
     padding: 10px;
 }
 /* END referenced CSS */
+
+.search_label {
+    font-size: large;
+    display: block;
+    padding-top: 10px;
+    font-weight: bold;  
+}
 
 /* Upload Page CSS ============================*/
 #file_img {

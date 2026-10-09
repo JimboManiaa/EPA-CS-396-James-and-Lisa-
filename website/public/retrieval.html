@@ -90,7 +90,9 @@
                         <option value="">Select a fuel type</option>
                     </select>
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
-                    <br>
+
+
+                    <button type="reset">Clear Filters</button>
 
                 <!-- End left column -->
                 </div>
@@ -237,13 +239,33 @@
 
     <!-- end the filter expander-->
 
+    <!-- BASIC SEARCH ======================================-->
     <div class="info_content">
 
-        <!-- Search Bar -->
+        <label class="search_label">Basic Search</label>
+
+        <!-- BASIC Search Bar -->
         <form role="search" id="search-form" onsubmit="return false;">
             <label for="site-search">Search the database:</label>
             <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
             <!--<button type="submit">Search</button>-->
+        </form>
+    </div>
+
+    <!-- FANCY SEARCH ======================================-->
+    <div class="info_content">
+
+        <label class="search_label">Assisted Search</label>
+
+        <!-- BASIC Search Bar -->
+        <form role="search" id="search-form" onsubmit="return false;">
+            <p>
+                The Assisted Search is useful for scenarios in which you are looking for data, but have no specifics regarding the dataset.<br>
+                Ex.: "Find coal units in Kentucky with high CO2 emissions."
+            </p>
+            <label for="site-search">Search the database:</label>
+            <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
+            <button type="submit">Search</button>
         </form>
     </div>
 
