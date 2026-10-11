@@ -4,9 +4,10 @@ This project aims to offer a service which can host, sort, and visualize Clean A
 ## Description
 This project aims to design, implement, test, and deploy a database-driven web application which stores CAMPD data. The application supports the collection, storage, and management of CAMPD data provided by the U.S Environment Protection Agency.
     
-    The website features 5 pages: A home index, Data Retrieval, Explore Data, Upload Data, Download Data, and Facility. Each page has its own search functionality, exluding the index page. 
+The website features 5 pages: A home index, Data Retrieval, Explore Data, Upload Data, Download Data, and Facility. Each page has its own search functionality, inluding the index page. 
     
-    Each page has the following features:
+Each page has the following features:
+
     #1.  The index page features a short, informative biography of CAMPD 
             data. Along with this is a table of data which shares information regarding all of the uploaded data sets.
     #2.   The data retrieval page features a variety of filters, a basic 
@@ -20,18 +21,16 @@ This project aims to design, implement, test, and deploy a database-driven web a
 
 ## Prerequisites
 This project relies on the following libraries/dependencies to run:
-    - Node.js
-    - a local connection to MySQL
-    - Google Generative API 
+    Node.js
+    A local connection to MySQL
+    Google Generative API 
 
-## Installation
-UNFINISHED <---------------------------------------
+Include details about system setup and environment configuration.
 
-## Usage
-This project may be used in a variety of ways, for example: 
-UNFINISHED <---------------------------------------
+## Installation 
 
-
+Provide step-by-step instructions to reproduce your project results.
+Ensure that anyone can follow the instructions and run your source code successfully.
 
 ## Contribution
 This project was developed by Lisa Hendricks and James Roberts for Dr. Xia's 396-002 Intermediate Software Projct class. Each team member's contribution has been logged within our GitHub. Attached is the link to our project GitHub:
