@@ -335,3 +335,16 @@ input[type="range"] {
 .range_container {
     max-width: 180px;
 }
+.form_control_container__time__input {
+    width: 82px; 
+    box-sizing: border-box;
+}
+/* Force dropdowns and inputs to show all 4 borders */
+.filt_col select, 
+.filt_col input[type="date"],
+.filt_col input[type="number"] {
+        border: 1px solid #a0a0a0 !important;
+        border-radius: 4px;
+        padding: 4px;
+        margin-top: 1px; 
+}

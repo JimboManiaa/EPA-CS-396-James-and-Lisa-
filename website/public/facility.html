@@ -17,7 +17,7 @@
         <img src="logo.png" id="logo">
 
         <!-- Title -->
-        <h1 id="site_title">CAMPD Data Manager</h1>
+        <h1 id="site_title">CAMPD Manager</h1>
     </div>    
 
     <!-- The nav bar ------------------------------------------------------>
@@ -98,101 +98,204 @@
             </thead>
 
                 <tbody id="tableBody">
-                    <!-- JavaScript will put the rows here -->
-
+                <!--JS rows will be dynamically inserted here -->
                 </tbody>
 
             </table>
     </div>
 
+    <!-- Pagination Controls -->
+    <div id="pagination-controls" style="text-align: center; margin-top: 15px; display: none;">
+        <button id="prevPageBtn" class="btn" style="margin-right: 10px;">Previous</button>
+        <span style="margin: 0 10px;">
+            Page <input type="number" id="pageJumpInput" style="width: 60px; text-align: center;" min="1" value="1"> of <span id="totalPagesIndicator">1</span>
+        </span>
+        <button id="nextPageBtn" class="btn" style="margin-left: 10px;">Next</button>
+    </div>
+
 <!-- JS to connect the website to the database ===================== -->
 <script>
 
-    // Temporary data for designing the website.
-    // Later, this will come from MySQL.
+let currentData = [];
+let currentPage = 1;
+const rowsPerPage = 50;
+
     async function loadDatabaseTable() {
         const tableBody = document.getElementById("tableBody");
-        tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading live data from MySQL...</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="2" class="text-center">Loading live data from MySQL...</td></tr>`;
 
         try {
-            const response = await fetch('/api/datasets');
+            const response = await fetch('/api/facilities');
             if (!response.ok) throw new Error('Failed to fetch data from server');
             
-            const liveData = await response.json();
+            currentData = await response.json();
             
             tableBody.innerHTML = ""; // Clear loading message
 
-            if (liveData.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No datasets installed yet.</td></tr>`;
+            if (currentData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="2" class="text-center">No facilities installed yet.</td></tr>`;
+                document.getElementById("pagination-controls").style.display = "none";
                 return;
             }
 
-            liveData.forEach(entry => {
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td>${entry.id}</td>
-                    <td>${entry.facility}</td>
-                `;
-                tableBody.appendChild(row);
-            });
+            // Check URL for a specific facility ID
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get('id');
+
+            if (targetId) {
+                const targetFacility = currentData.filter(entry => String(entry.epa_facility_id) === targetId);
+                const searchInput = document.getElementById("site-search");
+                if (targetFacility.length > 0 && searchInput) {
+                    searchInput.value = targetFacility[0].facility_name;
+                }
+            }
+
+            currentPage = 1;
+            renderPaginatedData();
 
         } catch (error) {
             console.error("Error loading table data:", error);
-            tableBody.innerHTML = `<tr><td colspan="5" class="text-danger text-center">Error connecting to database backend.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="2" class="text-danger text-center">Error connecting to database backend.</td></tr>`;
         }
     }
 
-    // Load live data on page load
-    loadDatabaseTable();
+    function renderPaginatedData() {
+        if (!currentData || currentData.length === 0) {
+            document.getElementById("pagination-controls").style.display = "none";
+            return;
+        }
 
+        const searchInput = document.getElementById("site-search");
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+        let dataToRender = [...currentData];
 
-    function displayTable(data) {
+        // Apply text filter
+        if (query) {
+            const terms = query.split(/\s+/).filter(Boolean);
+            dataToRender = dataToRender.filter(entry => {
+                const rowText = Object.values(entry)
+                    .filter(val => val !== null && val !== undefined)
+                    .map(val => String(val).toLowerCase())
+                    .join(" ");
+                return terms.every(term => rowText.includes(term));
+            });
+        }
 
+        // Apply Pagination
+        const totalPages = Math.ceil(dataToRender.length / rowsPerPage) || 1;
+        
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = dataToRender.slice(startIndex, endIndex);
+
+        // Render UI
+        renderRows(paginatedData);
+
+        // Update the jump-to-page input and bounds
+        document.getElementById("pagination-controls").style.display = "block";
+        document.getElementById("pageJumpInput").max = totalPages;
+        document.getElementById("pageJumpInput").value = currentPage;
+        document.getElementById("totalPagesIndicator").textContent = totalPages;
+        
+        document.getElementById("prevPageBtn").disabled = currentPage === 1;
+        document.getElementById("nextPageBtn").disabled = currentPage === totalPages;
+    }
+
+    function renderRows(data) {
         const tableBody = document.getElementById("tableBody");
-
         tableBody.innerHTML = "";
 
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="2" class="text-center">No matching records found.</td></tr>`;
+            return;
+        }
+
         data.forEach(entry => {
-
             const row = document.createElement("tr");
-
             row.innerHTML = `
-                <td>${entry.id}</td>
-                <td>${entry.facility}</td>
+                <td>${entry.epa_facility_id}</td>
+                <td>${entry.facility_name}</td>
             `;
-
             tableBody.appendChild(row);
         });
     }
 
+    document.addEventListener("DOMContentLoaded", () => {
+        // Load live data on page load
+        loadDatabaseTable();
 
-// Search Bar Functionality ===================================
+        const searchInput = document.getElementById("site-search");
+        const searchForm = document.getElementById("search-form");
 
-// Instant text search filter
-const searchInput = document.getElementById("site-search");
-const searchForm = document.getElementById("search-form");
+        // Instant multiple keyword search filter
+        searchInput.addEventListener("input", (e) => {
+            const rawQuery = e.target.value.toLowerCase().trim();
+            
+            // Clear URL
+            if (!rawQuery) {
+                const url = new URL(window.location);
+                url.searchParams.delete('id');
+                window.history.pushState({}, '', url);
+            }
 
-searchInput.addEventListener("input", (e) => {
-    const query = e.target.value.toLowerCase();
+            currentPage = 1;
+            renderPaginatedData();
+        });
 
-    if (!currentData || currentData.length === 0) return;
+        searchForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+        });
 
-    const columns = Object.keys(currentData[0]);
+        // Pagination Buttons
+        document.getElementById("prevPageBtn").addEventListener("click", () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPaginatedData();
+            }
+        });
 
-    const filtered = currentData.filter(entry => 
-        Object.values(entry).some(val => 
-            val !== null && String(val).toLowerCase().includes(query)
-        )
-    );
+        document.getElementById("nextPageBtn").addEventListener("click", () => {
+            let dataLength = currentData.length;
+            const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+            
+            if (query) {
+                const terms = query.split(/\s+/).filter(Boolean);
+                dataLength = currentData.filter(entry => {
+                    const rowText = Object.values(entry)
+                        .filter(val => val !== null && val !== undefined)
+                        .map(val => String(val).toLowerCase())
+                        .join(" ");
+                    return terms.every(term => rowText.includes(term));
+                }).length;
+            }
 
-    renderRows(filtered, columns);
-});
+            const totalPages = Math.ceil(dataLength / rowsPerPage) || 1;
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPaginatedData();
+            }
+        });
 
-searchForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    loadDatabaseTable();
-});
-
+        // Page Jump Listener
+        document.getElementById("pageJumpInput").addEventListener("change", (e) => {
+            let targetPage = parseInt(e.target.value, 10);
+            let maxPage = parseInt(e.target.max, 10) || 1;
+            
+            // Revert invalid entries
+            if (isNaN(targetPage) || targetPage < 1) {
+                targetPage = 1;
+            } else if (targetPage > maxPage) {
+                targetPage = maxPage;
+            }
+            
+            currentPage = targetPage;
+            renderPaginatedData();
+        });
+    });
 
 </script>
 <!-- END JS ============================================= -->

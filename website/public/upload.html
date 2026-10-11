@@ -14,7 +14,7 @@
             <!-- Logo -->
             <img src="logo.png" id="logo" alt="Logo">
             <!-- Title -->
-            <h1 id="site_title">CAMPD Data Manager</h1>
+            <h1 id="site_title">CAMPD Manager</h1>
         </div>    
 
         <!-- The nav bar ------------------------------------------------------>
@@ -58,13 +58,15 @@
                 <button type="submit" id="up_butt">Upload Data</button>
             </form>
 
-            <p id="upload-status" style="font-weight: bold; margin-top: 15px;"></p>
+            <!-- Fixed height container prevents the image/button from shifting -->
+            <div style="min-height: 100px; margin-top: 15px;">
+                <p id="upload-status" style="font-weight: bold; margin: 0;"></p>
+            </div>
         </div>
         
     </div>
 
     <!-- JS to import a file -->
-
     <script>
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -76,9 +78,9 @@
             const formData = new FormData();
             formData.append('csvfile', fileInput.files[0]);
 
-            statusText.textContent = "Uploading and processing...";
+            statusText.innerHTML = "Uploading and processing...";
             statusText.style.color = "black";
-            statusText.style.backgroundColor = "white";
+            statusText.style.backgroundColor = "transparent";
 
             try {
                 const response = await fetch('/api/upload-csv', {
@@ -89,20 +91,23 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    statusText.textContent = "Approved!: " + result.message;
+                    // Fallback to 0 if the server didn't send duplicates (e.g. server hasn't been restarted)
+                    const dupes = result.duplicates !== undefined ? result.duplicates : 0;
+                    
+                    statusText.innerHTML = `Upload Complete!<br>Accepted: ${result.accepted} records<br>Rejected/Incomplete: ${result.rejected} records<br>Duplicates Skipped: ${dupes} records.`;
                     statusText.style.color = "green";
-                    statusText.style.backgroundColor = "white";
+                    statusText.style.backgroundColor = "transparent";
                     fileInput.value = ""; 
                 } else {
-                    statusText.textContent = "ERROR!: " + result.error;
+                    statusText.innerHTML = "ERROR!<br>" + result.error;
                     statusText.style.color = "red";
-                    statusText.style.backgroundColor = "white";
+                    statusText.style.backgroundColor = "transparent";
                 }
             } catch (error) {
                 console.error("Upload error:", error);
-                statusText.textContent = "ERROR!: Connection error during upload.";
+                statusText.innerHTML = "ERROR!<br>Connection error during upload.";
                 statusText.style.color = "red";
-                statusText.style.backgroundColor = "white";
+                statusText.style.backgroundColor = "transparent";
             }
         });
     </script>

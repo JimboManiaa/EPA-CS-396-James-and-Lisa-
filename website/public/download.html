@@ -17,7 +17,7 @@
         <img src="logo.png" id="logo">
 
         <!-- Title -->
-        <h1 id="site_title">CAMPD Data Manager</h1>
+        <h1 id="site_title">CAMPD Manager</h1>
     </div>    
 
     <!-- The nav bar ------------------------------------------------------>
@@ -45,14 +45,13 @@
 
     <!-- Script to get the files ======================================-->
     <script>
-        document.getElementById("downloadCsv").addEventListener("click", async () => {
-            window.location.href="/download/csv";
-        });
+    document.getElementById("downloadCsv").addEventListener("click", () => {
+        window.location.href = "/api/download/annual_records?format=csv";
+    });
 
-        document.getElementById("downloadXlsx").addEventListener("click", async () => {
-            window.location.href="/download/xlsx";
-        });
-
+    document.getElementById("downloadXlsx").addEventListener("click", () => {
+        window.location.href = "/api/download/annual_records?format=xlsx";
+    });
     </script>
 
 
@@ -62,10 +61,9 @@
 
     <p>Select a table below to download its contents as a .csv or .xlsx file</p>
     
-
     <!-- Search Bar -->
-        <!-- Search Bar -->
-        <form role="search" action="/search" method="get">
+     <!-- Search Bar -->
+        <form role="search" id="search-form" onsubmit="return false;">
             <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
         </form>
 
@@ -80,12 +78,11 @@
                     <th>Source</th>
                     <th>Date Installed</th>
                     <th>Record Count</th>
+                    <th>Installation</th>
                 </tr>
             </thead>
 
                 <tbody id="tableBody">
-                    <!-- JavaScript will put the rows here -->
-
                 </tbody>
 
             </table>
@@ -95,84 +92,92 @@
 
 <script>
 
-    // Temporary data for designing the website.
-    // Later, this will come from MySQL.
+    let currentData = [];
+
     async function loadDatabaseTable() {
         const tableBody = document.getElementById("tableBody");
-        tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading live data from MySQL...</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center">Loading live data from MySQL...</td></tr>`;
 
         try {
             const response = await fetch('/api/datasets');
             if (!response.ok) throw new Error('Failed to fetch data from server');
             
-            const liveData = await response.json();
+            currentData = await response.json();
             
             tableBody.innerHTML = ""; // Clear loading message
 
-            if (liveData.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No datasets installed yet.</td></tr>`;
+            if (currentData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center">No datasets installed yet.</td></tr>`;
                 return;
             }
 
-            liveData.forEach(entry => {
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td>${entry.id}</td>
-                    <td>${entry.name}</td>
-                    <td>${entry.facility}</td>
-                    <td>${entry.date}</td>
-                    <td><span class="badge bg-success">${entry.status}</span></td>
-                `;
-                tableBody.appendChild(row);
-            });
+            renderRows(currentData);
 
         } catch (error) {
             console.error("Error loading table data:", error);
-            tableBody.innerHTML = `<tr><td colspan="5" class="text-danger text-center">Error connecting to database backend.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-danger text-center">Error connecting to database backend.</td></tr>`;
         }
     }
 
-    // Load live data on page load
-    loadDatabaseTable();
-
-
-    function displayTable(data) {
-
+    function renderRows(data) {
         const tableBody = document.getElementById("tableBody");
-
         tableBody.innerHTML = "";
+        
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-center">No matching records found.</td></tr>`;
+            return;
+        }
 
         data.forEach(entry => {
-
             const row = document.createElement("tr");
-
             row.innerHTML = `
                 <td>${entry.id}</td>
                 <td>${entry.name}</td>
                 <td>${entry.facility}</td>
                 <td>${entry.date}</td>
-                <td>${entry.status}</td>
+                <td><span class="badge bg-success">${entry.status}</span></td>
+                <td><button type="button" onclick="window.location.href='/api/download/dataset/${entry.id}'" style="padding: 5px 10px; cursor: pointer;">Download CSV</button></td>
             `;
-
             tableBody.appendChild(row);
         });
     }
 
+    // Load live data on page load
+    loadDatabaseTable();
+
+    // Instant multi-keyword search filter
+    const searchInput = document.getElementById("site-search");
+    const searchForm = document.getElementById("search-form");
+
+    searchInput.addEventListener("input", (e) => {
+        const rawQuery = e.target.value.toLowerCase().trim();
+        if (!currentData || currentData.length === 0) return;
+
+        if (!rawQuery) {
+            renderRows(currentData);
+            return;
+        }
+
+        const terms = rawQuery.split(/\s+/).filter(Boolean);
+
+        const filtered = currentData.filter(entry => {
+            const rowText = Object.values(entry)
+                .filter(val => val !== null && val !== undefined)
+                .map(val => String(val).toLowerCase())
+                .join(" ");
+
+            return terms.every(term => rowText.includes(term));
+        });
+
+        renderRows(filtered);
+    });
+
+    searchForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+    });
 
 </script>
 </div>
 
 </body>
 </html>
-
-<!-- 
-
-Previously used code, which can be improved upon BUT works
-
-    <div class="list-group" style="color: black">
-        <a href="/api/download/facilities" class="list-group-item list-group-item-action">Download Facilities Table (CSV)</a>
-        <a href="/api/download/units" class="list-group-item list-group-item-action">Download Units Table (CSV)</a>
-        <a href="/api/download/hourly_emissions" class="list-group-item list-group-item-action">Download Hourly Emissions Table (CSV)</a>
-    </div>
-
--->

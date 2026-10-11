@@ -17,7 +17,7 @@
         <img src="logo.png" id="logo">
 
         <!-- Title -->
-        <h1 id="site_title">CAMPD Data Manager</h1>
+        <h1 id="site_title">CAMPD Manager</h1>
     </div>    
 
     <!-- The nav bar ------------------------------------------------------>
@@ -272,24 +272,36 @@
     <br>
 
     <!-- Datasets Section ----------------------------------------->
+    
+    <!-- Filtered Download Button -->
+    <div style="text-align: right; margin-bottom: 10px; margin-right: 20px;">
+        <button type="button" id="download-filtered-btn" class="btn" style="padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Download Filtered Data (CSV)
+        </button>
+    </div>
+
     <div class="db_holder">
         <table class="db_table">
             <thead id="tableHead">
-                <!-- JavaScript will populate the headers-->
             </thead>
             <tbody id="tableBody">
-                <!-- JavaScript will put the rows here -->
             </tbody>
         </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div id="pagination-controls" style="text-align: center; margin-top: 15px; display: none;">
+        <button id="prevPageBtn" class="btn" style="margin-right: 10px;">Previous</button>
+        <span style="margin: 0 10px;">
+            Page <input type="number" id="pageJumpInput" style="width: 60px; text-align: center;" min="1" value="1"> of <span id="totalPagesIndicator">1</span>
+        </span>
+        <button id="nextPageBtn" class="btn" style="margin-left: 10px;">Next</button>
     </div>
 
     </div>
 
 <script>
-    const assistedForm = document.getElementById("assisted-search-form");
-    const assistedInput = document.getElementById("assisted-search-input");
-
-   // Assisted Search Functionality
+    // Assisted Search Functionality
     document.addEventListener("DOMContentLoaded", () => {
         const assistedForm = document.getElementById("assisted-search-form");
         const assistedInput = document.getElementById("assisted-search-input");
@@ -303,29 +315,36 @@
                 const tableBody = document.getElementById("tableBody");
                 tableBody.innerHTML = `<tr><td colspan="5" class="text-center">AI is analyzing your request...</td></tr>`;
 
+                // Add the retry helper function
+                async function fetchWithRetry(url, maxRetries = 3) {
+                    for (let i = 0; i < maxRetries; i++) {
+                        try {
+                            const res = await fetch(url);
+                            if (res.ok) return res;
+                            if (res.status < 500 && res.status !== 429) return res;
+                        } catch (err) {
+                            if (i === maxRetries - 1) throw err;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+                    }
+                    throw new Error('API repeatedly failed');
+                }
+
                 try {
-                    const response = await fetch(`/api/assisted-search?q=${encodeURIComponent(query)}`);
-                    if (!response.ok) throw new Error('AI search failed');
+                    // Use fetchWithRetry
+                    const response = await fetchWithRetry(`/api/assisted-search?q=${encodeURIComponent(query)}`);
+                    if (!response.ok) throw new Error('AI search failed after retries');
 
                     const results = await response.json();
-                    currentData = results; // Update your global data array
+                    currentData = results; 
 
                     if (results.length > 0) {
-                        const columns = Object.keys(results[0]);
-                        
-                        // Rebuild table headers dynamically if needed
-                        const tableHead = document.getElementById("tableHead");
-                        tableHead.innerHTML = "";
-                        const headerRow = document.createElement("tr");
-                        columns.forEach(column => {
-                            const th = document.createElement("th");
-                            th.textContent = formatColumnName(column);
-                            headerRow.appendChild(th);
-                        });
-                        tableHead.appendChild(headerRow);
-
-                        renderRows(results, columns);
+                        currentPage = 1;
+                        sortCol = null;
+                        sortOrder = 'none';
+                        renderSortedData();
                     } else {
+                        document.getElementById("pagination-controls").style.display = "none";
                         tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No matching records found via AI search.</td></tr>`;
                     }
                 } catch (error) {
@@ -335,6 +354,7 @@
             });
         }
     });
+
     // Initialize Dual Slider sync
     function setupDualSlider(sliderFromId, sliderToId, inputFromId, inputToId, onUpdate) {
         const fromSlider = document.getElementById(sliderFromId);
@@ -426,14 +446,17 @@
 
     // Main fetch & render function
     let currentData = [];
+    let sortCol = null;
+    let sortOrder = 'none'; // ascending descending and neither option
+    
+    // Pagination Variables
+    let currentPage = 1;
+    const rowsPerPage = 50;
 
     async function loadDatabaseTable() {
-        const tableHead = document.getElementById("tableHead");
         const tableBody = document.getElementById("tableBody");
-
         tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading live data from MySQL...</td></tr>`;
 
-        // Build query string from filter inputs
         const params = new URLSearchParams();
 
         const startDate = document.getElementById("start").value;
@@ -452,27 +475,26 @@
         if (sFuel) params.append('secondaryFuel', sFuel);
         if (progCode) params.append('programCode', progCode);
 
-        // Sliders
-        // Sliders: only send if modified from default 0 / 100
+        // Sliders 
         const grossMin = document.getElementById("fromInput_grossLoad")?.value;
         const grossMax = document.getElementById("toInput_grossLoad")?.value;
         if (grossMin && Number(grossMin) > 0) params.append('minGrossLoad', grossMin);
-        if (grossMax && Number(grossMax) < 100) params.append('maxGrossLoad', grossMax);
+        if (grossMax) params.append('maxGrossLoad', grossMax);
 
         const co2Min = document.getElementById("fromInput_co2")?.value;
         const co2Max = document.getElementById("toInput_co2")?.value;
         if (co2Min && Number(co2Min) > 0) params.append('minCO2', co2Min);
-        if (co2Max && Number(co2Max) < 100) params.append('maxCO2', co2Max);
+        if (co2Max) params.append('maxCO2', co2Max);
 
         const noxMin = document.getElementById("fromInput_nox")?.value;
         const noxMax = document.getElementById("toInput_nox")?.value;
         if (noxMin && Number(noxMin) > 0) params.append('minNOx', noxMin);
-        if (noxMax && Number(noxMax) < 100) params.append('maxNOx', noxMax);
+        if (noxMax) params.append('maxNOx', noxMax);
 
         const so2Min = document.getElementById("fromInput_so2")?.value;
         const so2Max = document.getElementById("toInput_so2")?.value;
         if (so2Min && Number(so2Min) > 0) params.append('minSO2', so2Min);
-        if (so2Max && Number(so2Max) < 100) params.append('maxSO2', so2Max);
+        if (so2Max) params.append('maxSO2', so2Max);
 
         try {
             const response = await fetch(`/api/retrieval-data?${params.toString()}`);
@@ -483,23 +505,13 @@
             tableBody.innerHTML = "";
 
             if (currentData.length === 0) {
+                document.getElementById("pagination-controls").style.display = "none";
                 tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No matching records found.</td></tr>`;
                 return;
             }
 
-            const columns = Object.keys(currentData[0]);
-
-            // Create table headers
-            tableHead.innerHTML = "";
-            const headerRow = document.createElement("tr");
-            columns.forEach(column => {
-                const th = document.createElement("th");
-                th.textContent = formatColumnName(column);
-                headerRow.appendChild(th);
-            });
-            tableHead.appendChild(headerRow);
-
-            renderRows(currentData, columns);
+            currentPage = 1;
+            renderSortedData();
 
         } catch (error) {
             console.error("Error loading table data:", error);
@@ -518,7 +530,12 @@
             const row = document.createElement("tr");
             columns.forEach(column => {
                 const cell = document.createElement("td");
-                cell.textContent = entry[column] !== null ? entry[column] : "";
+                // If it's the facility name column, link it
+                if (column === "Facility Name") {
+                    cell.innerHTML = `<a href="facility.html?id=${entry["EPA ID"]}" style="color: #007bff; text-decoration: underline;">${entry[column]}</a>`;
+                } else {
+                    cell.textContent = entry[column] !== null ? entry[column] : "";
+                }
                 row.appendChild(cell);
             });
             tableBody.appendChild(row);
@@ -531,9 +548,158 @@
             .replace(/\b\w/g, letter => letter.toUpperCase());
     }
 
+    function handleSort(column) {
+        if (sortCol === column) {
+            if (sortOrder === 'asc') sortOrder = 'desc';
+            else if (sortOrder === 'desc') sortOrder = 'none';
+            else sortOrder = 'asc';
+        } else {
+            sortCol = column;
+            sortOrder = 'asc';
+        }
+        renderSortedData();
+    }
+
+    function renderHeaders(columns) {
+        const tableHead = document.getElementById("tableHead");
+        tableHead.innerHTML = "";
+        const headerRow = document.createElement("tr");
+
+        columns.forEach(column => {
+            const th = document.createElement("th");
+            th.style.cursor = "pointer";
+            th.style.userSelect = "none";
+            
+            let arrow = " ↕"; 
+            if (sortCol === column) {
+                if (sortOrder === 'asc') arrow = " ▲";
+                else if (sortOrder === 'desc') arrow = " ▼";
+            }
+
+            th.textContent = formatColumnName(column) + arrow;
+            th.addEventListener("click", () => handleSort(column));
+            headerRow.appendChild(th);
+        });
+        tableHead.appendChild(headerRow);
+    }
+
+    function renderSortedData() {
+        if (!currentData || currentData.length === 0) {
+            document.getElementById("pagination-controls").style.display = "none";
+            return;
+        }
+        
+        const columns = Object.keys(currentData[0]);
+        renderHeaders(columns);
+
+        const searchInput = document.getElementById("site-search");
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+        let dataToRender = [...currentData];
+
+        // Apply text filter
+        if (query) {
+            const terms = query.split(/\s+/).filter(Boolean);
+            dataToRender = dataToRender.filter(entry => {
+                const rowText = Object.values(entry)
+                    .filter(val => val !== null && val !== undefined)
+                    .map(val => String(val).toLowerCase())
+                    .join(" ");
+                return terms.every(term => rowText.includes(term));
+            });
+        }
+
+        // Apply sort
+        if (sortOrder !== 'none' && sortCol) {
+            dataToRender.sort((a, b) => {
+                let valA = a[sortCol];
+                let valB = b[sortCol];
+
+                if (valA === null) valA = '';
+                if (valB === null) valB = '';
+
+                const numA = Number(valA);
+                const numB = Number(valB);
+                if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+                    return sortOrder === 'asc' ? numA - numB : numB - numA;
+                }
+
+                const strA = String(valA).toLowerCase();
+                const strB = String(valB).toLowerCase();
+                if (strA < strB) return sortOrder === 'asc' ? -1 : 1;
+                if (strA > strB) return sortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        // Apply Pagination
+        const totalPages = Math.ceil(dataToRender.length / rowsPerPage) || 1;
+        
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = dataToRender.slice(startIndex, endIndex);
+
+        // Render UI
+        renderRows(paginatedData, columns);
+
+        // Update bounds
+        document.getElementById("pagination-controls").style.display = "block";
+        document.getElementById("pageJumpInput").max = totalPages;
+        document.getElementById("pageJumpInput").value = currentPage;
+        document.getElementById("totalPagesIndicator").textContent = totalPages;
+        
+        document.getElementById("prevPageBtn").disabled = currentPage === 1;
+        document.getElementById("nextPageBtn").disabled = currentPage === totalPages;
+    }
+    
+    async function initializeSliders() {
+    try {
+        const res = await fetch('/api/metric-ranges');
+        if (!res.ok) return;
+        const ranges = await res.json();
+
+        // slider bounds
+        const setRangeBounds = (fromSliderId, toSliderId, fromInputId, toInputId, maxVal) => {
+            const fSlider = document.getElementById(fromSliderId);
+            const tSlider = document.getElementById(toSliderId);
+            const fInput = document.getElementById(fromInputId);
+            const tInput = document.getElementById(toInputId);
+
+            if (!fSlider || !tSlider || !fInput || !tInput) return;
+
+            fSlider.min = 0; 
+            fSlider.max = maxVal; 
+            fSlider.value = 0;
+
+            tSlider.min = 0; 
+            tSlider.max = maxVal; 
+            tSlider.value = maxVal;
+            
+            fInput.min = 0; 
+            fInput.max = maxVal; 
+            fInput.value = 0;
+
+            tInput.min = 0; 
+            tInput.max = maxVal; 
+            tInput.value = maxVal;
+        };
+
+        setRangeBounds('fromSlider_grossLoad', 'toSlider_grossLoad', 'fromInput_grossLoad', 'toInput_grossLoad', ranges.maxGross);
+        setRangeBounds('fromSlider_co2', 'toSlider_co2', 'fromInput_co2', 'toInput_co2', ranges.maxCO2);
+        setRangeBounds('fromSlider_nox', 'toSlider_nox', 'fromInput_nox', 'toInput_nox', ranges.maxNOx);
+        setRangeBounds('fromSlider_so2', 'toSlider_so2', 'fromInput_so2', 'toInput_so2', ranges.maxSO2);
+
+    } catch (e) {
+        console.error("Error initializing metric slider ranges:", e);
+    }
+}
     // Attach listeners on load
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
         loadFilterDropdowns();
+        await initializeSliders(); 
         loadDatabaseTable();
 
         // Attach reload on input changes
@@ -554,25 +720,136 @@
         setupDualSlider('fromSlider_nox', 'toSlider_nox', 'fromInput_nox', 'toInput_nox', loadDatabaseTable);
         setupDualSlider('fromSlider_so2', 'toSlider_so2', 'fromInput_so2', 'toInput_so2', loadDatabaseTable);
 
-        // Instant text search filter
+        // text filters
         const searchInput = document.getElementById("site-search");
         const searchForm = document.getElementById("search-form");
         
-        searchInput.addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase();
-            if (!currentData || currentData.length === 0) return;
-            const columns = Object.keys(currentData[0]);
-            const filtered = currentData.filter(entry => 
-                Object.values(entry).some(val => 
-                    val !== null && String(val).toLowerCase().includes(query)
-                )
-            );
-            renderRows(filtered, columns);
+        searchInput.addEventListener("input", () => {
+            currentPage = 1;
+            renderSortedData();
         });
 
         searchForm.addEventListener("submit", (e) => {
             e.preventDefault();
             loadDatabaseTable();
+        });
+
+        // Pagination Buttons
+        document.getElementById("prevPageBtn").addEventListener("click", () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderSortedData();
+            }
+        });
+
+        document.getElementById("nextPageBtn").addEventListener("click", () => {
+            let dataLength = currentData.length;
+            const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+            
+            if (query) {
+                const terms = query.split(/\s+/).filter(Boolean);
+                dataLength = currentData.filter(entry => {
+                    const rowText = Object.values(entry)
+                        .filter(val => val !== null && val !== undefined)
+                        .map(val => String(val).toLowerCase())
+                        .join(" ");
+                    return terms.every(term => rowText.includes(term));
+                }).length;
+            }
+
+            const totalPages = Math.ceil(dataLength / rowsPerPage) || 1;
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderSortedData();
+            }
+        });
+
+        // Page Jump Input Listener
+        document.getElementById("pageJumpInput").addEventListener("change", (e) => {
+            let targetPage = parseInt(e.target.value, 10);
+            let maxPage = parseInt(e.target.max, 10) || 1;
+            
+            // Revert invalid entries to valid bounds
+            if (isNaN(targetPage) || targetPage < 1) {
+                targetPage = 1;
+            } else if (targetPage > maxPage) {
+                targetPage = maxPage;
+            }
+            
+            currentPage = targetPage;
+            renderSortedData();
+        });
+
+        // CSV download of filtered data
+        document.getElementById("download-filtered-btn").addEventListener("click", () => {
+            if (!currentData || currentData.length === 0) {
+                alert("No data available to download.");
+                return;
+            }
+
+            // re apply filter
+            const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+            let dataToDownload = [...currentData];
+
+            if (query) {
+                const terms = query.split(/\s+/).filter(Boolean);
+                dataToDownload = dataToDownload.filter(entry => {
+                    const rowText = Object.values(entry)
+                        .filter(val => val !== null && val !== undefined)
+                        .map(val => String(val).toLowerCase())
+                        .join(" ");
+                    return terms.every(term => rowText.includes(term));
+                });
+            }
+
+            // reapply active sorting
+            if (sortOrder !== 'none' && sortCol) {
+                dataToDownload.sort((a, b) => {
+                    let valA = a[sortCol];
+                    let valB = b[sortCol];
+
+                    if (valA === null) valA = '';
+                    if (valB === null) valB = '';
+
+                    const numA = Number(valA);
+                    const numB = Number(valB);
+                    if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+                        return sortOrder === 'asc' ? numA - numB : numB - numA;
+                    }
+
+                    const strA = String(valA).toLowerCase();
+                    const strB = String(valB).toLowerCase();
+                    if (strA < strB) return sortOrder === 'asc' ? -1 : 1;
+                    if (strA > strB) return sortOrder === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            // convert to csv
+            const columns = Object.keys(dataToDownload[0]);
+            let csvContent = columns.join(",") + "\n"; // Headers
+
+            dataToDownload.forEach(row => {
+                let rowArray = columns.map(col => {
+                    let cellVal = row[col] !== null && row[col] !== undefined ? String(row[col]) : "";
+                    // Escape internal quotes and wrap the cell in quotes to safely handle any internal commas
+                    cellVal = cellVal.replace(/"/g, '""');
+                    return `"${cellVal}"`;
+                });
+                csvContent += rowArray.join(",") + "\n";
+            });
+
+            // download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", "filtered_campd_data.csv");
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         });
     });
 </script>
