@@ -4,7 +4,7 @@ This project aims to offer a service which can host, sort, and visualize Clean A
 ## Description
 This project aims to design, implement, test, and deploy a database-driven web application which stores CAMPD data. The application supports the collection, storage, and management of CAMPD data provided by the U.S Environment Protection Agency.
     
-The website features 5 pages: A home index, Data Retrieval, Explore Data, Upload Data, Download Data, and Facility. Each page has its own search functionality, inluding the index page. 
+The website features 6 pages: A home index, Data Retrieval, Explore Data, Upload Data, Download Data, and Facility. Each page has its own search functionality, including the index page. 
     
 Each page has the following features:
 
@@ -24,14 +24,35 @@ This project relies on the following libraries/dependencies to run:
     Node.js
     A local connection to MySQL
     Google Generative API 
+    Packages: express, sequalize, mysql2, dotenv, multer, xlsx, and @google/genai
 
-Include details about system setup and environment configuration.
+To begin you have to configure the environment to run to a local MySQL instance and the google API.
+1. Validate MySQL is running
+2. Create an empty database in MySQL (preferrably epadata)
+3. In the root create a file named .env
+4. Add these credentials to the .env file and save
+
+DB_USER={username}
+DB_PASSWORD={user_password}
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME={database_name}
+GEMINI_API_KEY={gemini_key}
 
 ## Installation 
 
-Provide step-by-step instructions to reproduce your project results.
-Ensure that anyone can follow the instructions and run your source code successfully.
-
+Step-by-step instructions to reproduce your project results.
+1. Close Github repository to local machine and open the directory
+2. Install dependencies by running the following command in the terminal:
+   npm install
+3. Build the database and seed data by running the following commands:
+   node node_data_ingestion.mjs
+4. Start the node.js web server by running the following commands:
+   node server.mjs
+5. Open a web browser and go to this url:
+   http://localhost:3000
+6. Upload a csv/xlsx file to the website. Here is a link to obtain EPA data
+   https://campd.epa.gov/data/custom-data-download
 ## Contribution
 This project was developed by Lisa Hendricks and James Roberts for Dr. Xia's 396-002 Intermediate Software Projct class. Each team member's contribution has been logged within our GitHub. Attached is the link to our project GitHub:
 
