@@ -301,6 +301,34 @@
     </div>
 
 <script>
+        document.getElementById("clear-filters-btn").addEventListener("click", async () => {
+            // Reset standard dates and dropdowns
+            document.getElementById("start").value = "2000-01-01";
+            document.getElementById("end").value = "2030-12-31";
+            document.getElementById("facility_name_select").value = "";
+            document.getElementById("db_id_select").value = "";
+            document.getElementById("p_fuel").value = "";
+            document.getElementById("s_fuel").value = "";
+            document.getElementById("program_code_select").value = "";
+
+            // Reset the static slider
+            if (document.getElementById("fromSlider_opTime")) {
+                document.getElementById("fromSlider_opTime").value = 0;
+                document.getElementById("fromInput_opTime").value = 0;
+                document.getElementById("toSlider_opTime").value = 100;
+                document.getElementById("toInput_opTime").value = 100;
+            }
+
+            // reset other sliders
+            await initializeSliders();
+
+            // clear search
+            const searchInput = document.getElementById("site-search");
+            if (searchInput) searchInput.value = "";
+
+            currentPage = 1;
+            loadDatabaseTable();
+        });
     // Assisted Search Functionality
     document.addEventListener("DOMContentLoaded", () => {
         const assistedForm = document.getElementById("assisted-search-form");
