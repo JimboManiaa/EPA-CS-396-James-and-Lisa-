@@ -45,14 +45,15 @@ Step-by-step instructions to reproduce your project results.
 1. Close Github repository to local machine and open the directory
 2. Install dependencies by running the following command in the terminal:
    npm install
-3. Build the database and seed data by running the following commands:
+3. Build the database and seed data by running the following commands in the Node_API directory:
    node node_data_ingestion.mjs
-4. Start the node.js web server by running the following commands:
+4. Start the node.js web server by running the following commands int the Node_API directory:
    node server.mjs
 5. Open a web browser and go to this url:
    http://localhost:3000
 6. Upload a csv/xlsx file to the website. Here is a link to obtain EPA data
    https://campd.epa.gov/data/custom-data-download
+   
 ## Contribution
 This project was developed by Lisa Hendricks and James Roberts for Dr. Xia's 396-002 Intermediate Software Projct class. Each team member's contribution has been logged within our GitHub. Attached is the link to our project GitHub:
 
