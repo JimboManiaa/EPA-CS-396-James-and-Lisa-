@@ -32,14 +32,261 @@
 
     <!-- Content begins here -->
 
-    <h2>Explore Data</h2>
+    <h2>Explore Environmental Impacts (EPA TRACI 2.2)</h2>
     <hr>
 
-    <div class="info_content">
-        <p>This page currently features no functionality. Functionality for this page is reserved and planned for Phase#2.</p>
+    <div class="about_content">
+        <p>
+            This module combines reported <b>CAMPD</b> annual emissions (converted from short tons to kilograms: 1 short ton = 907.18474 kg) with <b>EPA TRACI 2.2</b> characterization factors to estimate potential environmental and human-health impacts.
+        </p>
     </div>
 
-</div>
+    <div class="info_content">
+        <label class="search_label">Impact Filter</label>
+        <form id="explore-filter-form" onsubmit="return false;">
+            <label for="categoryFilter">Impact Category:</label>
+            <select id="categoryFilter" name="categoryFilter">
+                <option value="">All Impact Categories</option>
+            </select>
+
+            <label for="yearFilter">Reporting Year:</label>
+            <input type="number" id="yearFilter" name="yearFilter" placeholder="e.g. 2024">
+
+            <button type="button" id="applyExploreBtn">Calculate Impacts</button>
+        </form>
+    </div>
+    <hr>
+
+    <h2>TRACI 2.2 Reference Characterization Factors</h2>
+
+    <div class="db_holder">
+        <table class="db_table">
+            <thead>
+                <tr>
+                    <th>TRACI Version</th>
+                    <th>Pollutant</th>
+                    <th>Substance Name</th>
+                    <th>Impact Category</th>
+                    <th>Factor Value</th>
+                    <th>Factor Unit</th>
+                </tr>
+            </thead>
+            <tbody id="factorsBody">
+            </tbody>
+        </table>
+    </div>
+
+    <hr>
+
+    <h2>Calculated Facility & Unit Impact Results</h2>
+
+    <div class="info_content">
+        <form role="search" id="search-form" onsubmit="return false;">
+            <label for="site-search">Search impact results:</label>
+            <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
+        </form>
+    </div>
+
+    <div class="db_holder">
+        <table class="db_table">
+            <thead>
+                <tr>
+                    <th>Facility</th>
+                    <th>Unit</th>
+                    <th>Year</th>
+                    <th>Pollutant</th>
+                    <th>Emissions (short tons)</th>
+                    <th>Impact Category</th>
+                    <th>TRACI Factor</th>
+                    <th>Total Impact Score</th>
+                    <th>Impact / Gross Load (per MWh)</th>
+                </tr>
+            </thead>
+            <tbody id="impactsBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="pagination-controls" style="text-align: center; margin-top: 15px; display: none;">
+        <button id="prevPageBtn" class="btn" style="margin-right: 10px;">Previous</button>
+        <span style="margin: 0 10px;">
+            Page <input type="number" id="pageJumpInput" style="width: 60px; text-align: center;" min="1" value="1"> of <span id="totalPagesIndicator">1</span>
+        </span>
+        <button id="nextPageBtn" class="btn" style="margin-left: 10px;">Next</button>
+    </div>
+
+    </div> 
+
+<script>
+let currentImpactData = [];
+let currentPage = 1;
+const rowsPerPage = 50;
+
+async function loadFactors() {
+    const tbody = document.getElementById('factorsBody');
+    const catSelect = document.getElementById('categoryFilter');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading TRACI 2.2 factors from MySQL...</td></tr>';
+
+    try {
+        const res = await fetch('/api/traci-factors');
+        if (!res.ok) throw new Error('Failed to fetch TRACI factors');
+        const factors = await res.json();
+
+        tbody.innerHTML = '';
+        const categories = new Set();
+
+        if (factors.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No TRACI factors installed yet.</td></tr>';
+            return;
+        }
+
+        factors.forEach(f => {
+            categories.add(f.impact_category);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${f.traci_version}</td>
+                <td>${f.pollutant_code}</td>
+                <td>${f.pollutant_name}</td>
+                <td>${f.impact_category}</td>
+                <td>${f.factor_value}</td>
+                <td>${f.factor_unit}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        categories.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            catSelect.appendChild(opt);
+        });
+    } catch (error) {
+        console.error("Error loading TRACI factors:", error);
+        tbody.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Error connecting to database backend.</td></tr>';
+    }
+}
+
+async function loadImpacts() {
+    const category = document.getElementById('categoryFilter').value;
+    const year = document.getElementById('yearFilter').value;
+    const params = new URLSearchParams();
+    if (category) params.append('impactCategory', category);
+    if (year) params.append('year', year);
+
+    const tbody = document.getElementById('impactsBody');
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Calculating impacts from MySQL...</td></tr>';
+
+    try {
+        const res = await fetch(`/api/traci-impacts?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch impact calculations');
+        currentImpactData = await res.json();
+
+        if (currentImpactData.length === 0) {
+            document.getElementById('pagination-controls').style.display = 'none';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center">No matching records found.</td></tr>';
+            return;
+        }
+
+        currentPage = 1;
+        renderPaginatedImpacts();
+    } catch (error) {
+        console.error("Error loading impacts:", error);
+        tbody.innerHTML = '<tr><td colspan="9" class="text-danger text-center">Error connecting to database backend.</td></tr>';
+    }
+}
+
+function renderPaginatedImpacts() {
+    const tbody = document.getElementById('impactsBody');
+    const searchInput = document.getElementById('site-search');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    let filtered = [...currentImpactData];
+    if (query) {
+        const terms = query.split(/\s+/).filter(Boolean);
+        filtered = filtered.filter(row => {
+            const rowText = Object.values(row)
+                .filter(val => val !== null && val !== undefined)
+                .map(val => String(val).toLowerCase())
+                .join(' ');
+            return terms.every(term => rowText.includes(term));
+        });
+    }
+
+    const totalPages = Math.ceil(filtered.length / rowsPerPage) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const pageRows = filtered.slice(startIndex, startIndex + rowsPerPage);
+
+    tbody.innerHTML = '';
+    if (pageRows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No matching records found.</td></tr>';
+        document.getElementById('pagination-controls').style.display = 'none';
+        return;
+    }
+
+    pageRows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><a href="facility.html?id=${row.epa_facility_id}" style="color: #007bff; text-decoration: underline;">${row.facility_name}</a> (${row.state})</td>
+            <td>${row.unit_id}</td>
+            <td>${row.reporting_year}</td>
+            <td>${row.pollutant}</td>
+            <td>${Number(row.reported_tons).toLocaleString()}</td>
+            <td>${row.impact_category}</td>
+            <td>${row.factor_value} ${row.factor_unit} (v${row.traci_version})</td>
+            <td><b>${Number(row.impact_score).toLocaleString()}</b> ${row.impact_unit}</td>
+            <td>${row.intensity_per_mwh !== 'N/A' ? Number(row.intensity_per_mwh).toLocaleString() + ' ' + row.impact_unit + '/MWh' : 'N/A'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('pagination-controls').style.display = 'block';
+    document.getElementById('pageJumpInput').max = totalPages;
+    document.getElementById('pageJumpInput').value = currentPage;
+    document.getElementById('totalPagesIndicator').textContent = totalPages;
+    document.getElementById('prevPageBtn').disabled = currentPage === 1;
+    document.getElementById('nextPageBtn').disabled = currentPage === totalPages;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadFactors();
+    await loadImpacts();
+
+    document.getElementById('applyExploreBtn').addEventListener('click', loadImpacts);
+    document.getElementById('categoryFilter').addEventListener('change', loadImpacts);
+
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', () => {
+        currentPage = 1;
+        renderPaginatedImpacts();
+    });
+
+    document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderPaginatedImpacts();
+        }
+    });
+
+    document.getElementById('nextPageBtn').addEventListener('click', () => {
+        const maxPage = parseInt(document.getElementById('pageJumpInput').max, 10) || 1;
+        if (currentPage < maxPage) {
+            currentPage++;
+            renderPaginatedImpacts();
+        }
+    });
+
+    document.getElementById('pageJumpInput').addEventListener('change', (e) => {
+        let targetPage = parseInt(e.target.value, 10);
+        let maxPage = parseInt(e.target.max, 10) || 1;
+        if (isNaN(targetPage) || targetPage < 1) targetPage = 1;
+        else if (targetPage > maxPage) targetPage = maxPage;
+        currentPage = targetPage;
+        renderPaginatedImpacts();
+    });
+});
+</script>
 
 </body>
 </html>
