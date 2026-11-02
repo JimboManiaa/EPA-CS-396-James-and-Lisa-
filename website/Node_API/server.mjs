@@ -8,15 +8,17 @@ import {
   Dataset,
   Facility, 
   Unit, 
-  AnnualRecord 
+  AnnualRecord,
+  TraciFactor
 } from './node_models.mjs';
 import multer from 'multer';
 import fs from 'fs';
-import { GoogleGenAI } from '@google/genai';
+//import { GoogleGenAI } from '@google/genai';
 import XLSX from 'xlsx';
-
+import Groq from 'groq-sdk';
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 // Initialize Gemini client 
-const ai = new GoogleGenAI();
+//const ai = new GoogleGenAI();
 
 // Configure multer to save files to uploads
 const upload = multer({ dest: 'uploads/' });
@@ -265,6 +267,98 @@ app.get('/api/retrieval-data', async (req, res) => {
   }
 });
 
+// TRACI 2.2 Routes
+const SHORT_TON_TO_KG = 907.18474;
+
+app.get('/api/traci-factors', async (req, res) => {
+  try {
+    const factors = await TraciFactor.findAll({
+      order: [['impact_category', 'ASC'], ['pollutant_code', 'ASC']]
+    });
+    res.json(factors);
+  } catch (error) {
+    console.error("Failed to fetch TRACI factors:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get('/api/traci-impacts', async (req, res) => {
+  try {
+    const { year, state, facilityId, impactCategory } = req.query;
+
+    const facilityWhere = {};
+    if (state) facilityWhere.state = state;
+    if (facilityId) facilityWhere.epa_facility_id = facilityId;
+
+    const recordWhere = {};
+    if (year) recordWhere.reporting_year = parseInt(year, 10);
+
+    const factorWhere = {};
+    if (impactCategory) factorWhere.impact_category = impactCategory;
+
+    const [factors, facilities] = await Promise.all([
+      TraciFactor.findAll({ where: factorWhere, raw: true }),
+      Facility.findAll({
+        where: facilityWhere,
+        include: [{
+          model: Unit,
+          required: true,
+          include: [{
+            model: AnnualRecord,
+            required: true,
+            where: Object.keys(recordWhere).length ? recordWhere : undefined
+          }]
+        }],
+        limit: 250
+      })
+    ]);
+
+    const results = [];
+
+    facilities.forEach(fac => {
+      fac.Units.forEach(unit => {
+        unit.AnnualRecords.forEach(rec => {
+          const massKg = {
+            CO2: (rec.co2_mass || 0) * SHORT_TON_TO_KG,
+            SO2: (rec.so2_mass || 0) * SHORT_TON_TO_KG,
+            NOx: (rec.nox_mass || 0) * SHORT_TON_TO_KG
+          };
+
+          factors.forEach(f => {
+            const pollutantKg = massKg[f.pollutant_code] || 0;
+            const impactScore = pollutantKg * f.factor_value;
+            const intensityPerMWh = rec.gross_load > 0 ? (impactScore / rec.gross_load) : null;
+
+            results.push({
+              facility_name: fac.facility_name,
+              epa_facility_id: fac.epa_facility_id,
+              state: fac.state,
+              unit_id: unit.epa_unit_id,
+              primary_fuel: unit.primary_fuel || 'N/A',
+              reporting_year: rec.reporting_year,
+              gross_load_mwh: rec.gross_load,
+              pollutant: f.pollutant_code,
+              reported_tons: rec[`${f.pollutant_code.toLowerCase()}_mass`] ?? 0,
+              traci_version: f.traci_version,
+              impact_category: f.impact_category,
+              factor_value: f.factor_value,
+              factor_unit: f.factor_unit,
+              impact_score: Number(impactScore.toFixed(2)),
+              impact_unit: f.factor_unit.split('/')[0].trim(),
+              intensity_per_mwh: intensityPerMWh !== null ? Number(intensityPerMWh.toFixed(4)) : 'N/A'
+            });
+          });
+        });
+      });
+    });
+
+    res.json(results);
+  } catch (error) {
+    console.error("Failed to calculate TRACI impacts:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // CSV or XLSX download route
 app.get('/api/download/:tableName', async (req, res) => {
   try {
@@ -281,6 +375,8 @@ app.get('/api/download/:tableName', async (req, res) => {
       data = await AnnualRecord.findAll({ limit: 1000, raw: true });
     } else if (tableName === 'datasets') {
       data = await Dataset.findAll({ raw: true });
+    } else if (tableName === 'traci_factors') {
+      data = await TraciFactor.findAll({ raw: true });
     } else {
       return res.status(400).json({ error: 'Invalid table selected' });
     }
@@ -331,7 +427,9 @@ app.get('/api/download/dataset/:id', async (req, res) => {
 
     let data = await AnnualRecord.findAll({ where: { dataset_id: datasetId }, raw: true });
 
-    if (data.length === 0 && dataset.reporting_year) {
+    if (data.length === 0 && dataset.data_source === 'EPA TRACI 2.2') {
+         data = await TraciFactor.findAll({ raw: true });
+    } else if (data.length === 0 && dataset.reporting_year) {
          data = await AnnualRecord.findAll({ where: { reporting_year: dataset.reporting_year }, raw: true });
     }
 
@@ -369,40 +467,62 @@ app.get('/api/download/dataset/:id', async (req, res) => {
   }
 });
 
-// AI assisted search route
+// 10. API Route for AI Assisted Search (Using Google Gemini / Groq)
 app.get('/api/assisted-search', async (req, res) => {
     try {
         const userPrompt = req.query.q;
         if (!userPrompt) return res.status(400).json({ error: "Query is required" });
 
-        const response = await ai.models.generateContent({
-            model: "gemini-3.7-flash",
-            contents: `Convert this user search into a JSON filter object: "${userPrompt}"`,
-            config: {
-                systemInstruction: `You extract filters from power plant data searches. Return ONLY a valid JSON object.
+        // UPDATED: Now using the stable Groq model
+        const response = await groq.chat.completions.create({
+            messages: [
+                {
+                    role: "system",
+                    // UPDATED: Added facility_name to the extraction list
+                    content: `You extract filters from power plant data searches. Return ONLY a valid JSON object.
 Use these keys if the data is present in the search:
+- "facility_name" (string, e.g., "Barry")
 - "year" (integer, e.g., 2024)
 - "state" (2-letter uppercase US state abbreviation, e.g., "KY")
 - "fuel" (string, strictly "Coal" or "Pipeline Natural Gas")
 
-If a filter is not mentioned, DO NOT include the key in the JSON.`,
-                responseMimeType: "application/json"
-            }
+If a filter is not mentioned, DO NOT include the key in the JSON.`
+                },
+                {
+                    role: "user",
+                    content: `Convert this user search into a JSON filter object: "${userPrompt}"`
+                }
+            ],
+            model: "openai/gpt-oss-120b",
+            response_format: { type: "json_object" }
         });
 
-        const filters = JSON.parse(response.text);
+        const filters = JSON.parse(response.choices[0].message.content);
 
         const facilityWhere = {};
         const unitWhere = {};
         const emissionsWhere = {};
 
+        // UPDATED: Map the facility_name filter using SQL 'LIKE' for fuzzy/partial matching
+        if (filters.facility_name) {
+            facilityWhere.facility_name = { [Op.like]: `%${filters.facility_name}%` };
+        }
         if (filters.year) emissionsWhere.reporting_year = filters.year;
         if (filters.state) facilityWhere.state = filters.state;
-        if (filters.fuel) unitWhere.primary_fuel = filters.fuel;
+        
+        // UPDATED: Apply fuzzy matching to fuel as well
+        if (filters.fuel) {
+            unitWhere.primary_fuel = { [Op.like]: `%${filters.fuel}%` };
+        }
 
         const hasFacilityFilter = Object.keys(facilityWhere).length > 0;
         const hasUnitFilter = Object.keys(unitWhere).length > 0;
         const hasEmissionFilter = Object.keys(emissionsWhere).length > 0;
+
+        // NEW SAFETY CHECK: If the LLM failed to extract any filters, return empty rather than dumping the whole database.
+        if (!hasFacilityFilter && !hasUnitFilter && !hasEmissionFilter) {
+             return res.json([]); 
+        }
 
         const facilities = await Facility.findAll({
             where: hasFacilityFilter ? facilityWhere : undefined,
@@ -473,7 +593,7 @@ app.get('/api/facilities', async (req, res) => {
   }
 });
 
-// csv and excel upload route
+// csv and excel upload
 app.post('/api/upload-csv', upload.single('csvfile'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
 
@@ -484,6 +604,88 @@ app.post('/api/upload-csv', upload.single('csvfile'), async (req, res) => {
 
     if (originalName.endsWith('.xlsx') || originalName.endsWith('.xls')) {
       const workbook = XLSX.readFile(filePath);
+
+      // Detect official EPA TRACI 2.2 workbook by checking for the 'Substances' sheet
+      if (workbook.SheetNames.includes('Substances')) {
+        const sheet = workbook.Sheets['Substances'];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+
+        // Exact uppercase Substance Names from traci_2_2.xlsx
+        const targetPollutants = {
+          'CARBON DIOXIDE': 'CO2',
+          'SULFUR DIOXIDE': 'SO2',
+          'NITROGEN OXIDES': 'NOx'
+        };
+
+        // Exact column header strings from traci_2_2.xlsx
+        const airCategories = [
+          {
+            col: 'Global Climate Air (kg CO2 eq / kg substance)',
+            name: 'Global Warming',
+            unit: 'kg CO2 eq / kg substance'
+          },
+          {
+            col: 'Acidification Air (kg SO2 eq / kg substance)',
+            name: 'Acidification',
+            unit: 'kg SO2 eq / kg substance'
+          },
+          {
+            col: 'HH Particulate Air (PM2.5 eq / kg substance)',
+            name: 'Human Health Particulate',
+            unit: 'PM2.5 eq / kg substance'
+          },
+          {
+            col: 'Photochemical Oxidation Formation Air (kg O3 eq / kg substance)',
+            name: 'Smog Formation',
+            unit: 'kg O3 eq / kg substance'
+          }
+        ];
+
+        const factorsToInsert = [];
+
+        for (const row of rows) {
+          const rawName = String(row['Substance Name'] || '').trim().toUpperCase();
+          const pollutantCode = targetPollutants[rawName];
+          if (!pollutantCode) continue;
+
+          for (const cat of airCategories) {
+            const val = parseFloat(row[cat.col]);
+            if (!isNaN(val) && val > 0) {
+              factorsToInsert.push({
+                traci_version: '2.2',
+                pollutant_code: pollutantCode,
+                pollutant_name: rawName,
+                compartment: 'Air',
+                impact_category: cat.name,
+                factor_value: val,
+                factor_unit: cat.unit
+              });
+            }
+          }
+        }
+
+        await TraciFactor.bulkCreate(factorsToInsert, {
+          updateOnDuplicate: ['factor_value', 'factor_unit', 'pollutant_name']
+        });
+
+        await Dataset.create({
+          dataset_name: req.file.originalname.replace(/\.[^/.]+$/, ''),
+          data_source: 'EPA TRACI 2.2',
+          reporting_year: 2022,
+          original_filename: req.file.originalname,
+          raw_records: rows.length,
+          accepted_records: factorsToInsert.length
+        });
+
+        fs.unlinkSync(filePath);
+        return res.json({
+          message: 'Successfully imported TRACI 2.2 characterization factors.',
+          accepted: factorsToInsert.length,
+          rejected: rows.length - 3,
+          duplicates: 0
+        });
+      }
+
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
