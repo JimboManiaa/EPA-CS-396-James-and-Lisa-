@@ -3,11 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Data</title>
+    <title>Facilities</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
 </head>
 <body>
-    
-    <p>This is the Facility page.</p>
+
+    <!-- Styles ALL content -->
+    <div class="content">
+
+    <div class="title_container">
+        <!-- Logo -->
+        <img src="logo.png" id="logo">
+
+        <!-- Title -->
+        <h1 id="site_title">CAMPD Manager</h1>
+    </div>    
+
+    <!-- The nav bar ------------------------------------------------------>
+    <table class="nav_bar">
+        <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
+        <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
+        <td class="nav_cell"><a href="analyze_data.html">Analyze Data</a></td>
+        <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
+        <td class="nav_cell"><a href="download.html">Download Data</a></td>
+        <td class="nav_cell"><a href="facility.html">Facility</a></td>
+    </table>
+
+    <!-- Content begins here -->
+
+    <h2>List of Facilities</h2>
+    <hr>
+
+    <div class="about_content">
+        <p>
+            The Environmental Protection Agency (EPA) provides detailed information about power plant facilities across the United States.
+            Facilities must follow a set of rules to keep the air, water, and land clean.
+            In cooperation with EPA, the Facility Registry Service (FRS) shares this recorded information with governments, businesses, and the public so that citizens can learn about their area.
+        </p>
+
+    <br>
+    <hr>
+
+    <h2>Highlighted Facilities</h2>
+    <!-- Facility #1 -->
+    <div class="sub_content">
+        
+        <img class="fac_img" src="jk_smith.png">
+        
+        <h3>Smith Generating Facility</h2>            
+            <p>
+                J.K. Smith is a power facility in Clark County, Kentucky, which is powered by natural gas.
+                The facility is registered as EIA Plant ID 54; East Kentucky Power Cooperative Inc.is the public owner and plant operator.
+                <i>(Ask the Grid) </i>
+            </p>
+    </div>
+
+
+    <br>
+    <!-- Facility #2 -->
+    <div class="sub_content">
+        
+        <img class="fac_img" src="hl_spurlock.png">
+        
+        <h3>H. L. Spurlock</h2>            
+            <p>
+                H. L. Spurlock is a coal-fired power facility in Mason County, Kentucky. The plant is registered as EIA plant ID 6041.
+                East Kentucky Power Cooperative Inc. is registered as the owner and plant entity/operator.
+                <i>(Ask the Grid) </i>
+            </p>
+    </div>
+
+</div>
+<hr>
+
+<!-- Table of facilities -->
+<h2>Facilities Installed</h2>
+
+    <!-- Search Bar -->
+    <form role="search" id="search-form" onsubmit="return false;">
+        <label for="site-search">Search for a facility:</label>
+        <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
+    </form>
+
+    <!-- Datasets Section ----------------------------------------->
+
+<div class="db_holder">
+        <table class="db_table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Facility Name</th>
+                </tr>
+            </thead>
+
+                <tbody id="tableBody">
+                <!--JS rows will be dynamically inserted here -->
+                </tbody>
+
+            </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div id="pagination-controls" style="text-align: center; margin-top: 15px; display: none;">
+        <button id="prevPageBtn" class="btn" style="margin-right: 10px;">Previous</button>
+        <span style="margin: 0 10px;">
+            Page <input type="number" id="pageJumpInput" style="width: 60px; text-align: center;" min="1" value="1"> of <span id="totalPagesIndicator">1</span>
+        </span>
+        <button id="nextPageBtn" class="btn" style="margin-left: 10px;">Next</button>
+    </div>
+
+<!-- JS to connect the website to the database ===================== -->
+<script>
+
+let currentData = [];
+let currentPage = 1;
+const rowsPerPage = 50;
+
+    async function loadDatabaseTable() {
+        const tableBody = document.getElementById("tableBody");
+        tableBody.innerHTML = `<tr><td colspan="2" class="text-center">Loading live data from MySQL...</td></tr>`;
+
+        try {
+            const response = await fetch('/api/facilities');
+            if (!response.ok) throw new Error('Failed to fetch data from server');
+            
+            currentData = await response.json();
+            
+            tableBody.innerHTML = ""; // Clear loading message
+
+            if (currentData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="2" class="text-center">No facilities installed yet.</td></tr>`;
+                document.getElementById("pagination-controls").style.display = "none";
+                return;
+            }
+
+            // Check URL for a specific facility ID
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get('id');
+
+            if (targetId) {
+                const targetFacility = currentData.filter(entry => String(entry.epa_facility_id) === targetId);
+                const searchInput = document.getElementById("site-search");
+                if (targetFacility.length > 0 && searchInput) {
+                    searchInput.value = targetFacility[0].facility_name;
+                }
+            }
+
+            currentPage = 1;
+            renderPaginatedData();
+
+        } catch (error) {
+            console.error("Error loading table data:", error);
+            tableBody.innerHTML = `<tr><td colspan="2" class="text-danger text-center">Error connecting to database backend.</td></tr>`;
+        }
+    }
+
+    function renderPaginatedData() {
+        if (!currentData || currentData.length === 0) {
+            document.getElementById("pagination-controls").style.display = "none";
+            return;
+        }
+
+        const searchInput = document.getElementById("site-search");
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+        let dataToRender = [...currentData];
+
+        // Apply text filter
+        if (query) {
+            const terms = query.split(/\s+/).filter(Boolean);
+            dataToRender = dataToRender.filter(entry => {
+                const rowText = Object.values(entry)
+                    .filter(val => val !== null && val !== undefined)
+                    .map(val => String(val).toLowerCase())
+                    .join(" ");
+                return terms.every(term => rowText.includes(term));
+            });
+        }
+
+        // Apply Pagination
+        const totalPages = Math.ceil(dataToRender.length / rowsPerPage) || 1;
+        
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = dataToRender.slice(startIndex, endIndex);
+
+        // Render UI
+        renderRows(paginatedData);
+
+        // Update the jump-to-page input and bounds
+        document.getElementById("pagination-controls").style.display = "block";
+        document.getElementById("pageJumpInput").max = totalPages;
+        document.getElementById("pageJumpInput").value = currentPage;
+        document.getElementById("totalPagesIndicator").textContent = totalPages;
+        
+        document.getElementById("prevPageBtn").disabled = currentPage === 1;
+        document.getElementById("nextPageBtn").disabled = currentPage === totalPages;
+    }
+
+    function renderRows(data) {
+        const tableBody = document.getElementById("tableBody");
+        tableBody.innerHTML = "";
+
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="2" class="text-center">No matching records found.</td></tr>`;
+            return;
+        }
+
+        data.forEach(entry => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${entry.epa_facility_id}</td>
+                <td>${entry.facility_name}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        // Load live data on page load
+        loadDatabaseTable();
+
+        const searchInput = document.getElementById("site-search");
+        const searchForm = document.getElementById("search-form");
+
+        // Instant multiple keyword search filter
+        searchInput.addEventListener("input", (e) => {
+            const rawQuery = e.target.value.toLowerCase().trim();
+            
+            // Clear URL
+            if (!rawQuery) {
+                const url = new URL(window.location);
+                url.searchParams.delete('id');
+                window.history.pushState({}, '', url);
+            }
+
+            currentPage = 1;
+            renderPaginatedData();
+        });
+
+        searchForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+        });
+
+        // Pagination Buttons
+        document.getElementById("prevPageBtn").addEventListener("click", () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPaginatedData();
+            }
+        });
+
+        document.getElementById("nextPageBtn").addEventListener("click", () => {
+            let dataLength = currentData.length;
+            const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
+            
+            if (query) {
+                const terms = query.split(/\s+/).filter(Boolean);
+                dataLength = currentData.filter(entry => {
+                    const rowText = Object.values(entry)
+                        .filter(val => val !== null && val !== undefined)
+                        .map(val => String(val).toLowerCase())
+                        .join(" ");
+                    return terms.every(term => rowText.includes(term));
+                }).length;
+            }
+
+            const totalPages = Math.ceil(dataLength / rowsPerPage) || 1;
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPaginatedData();
+            }
+        });
+
+        // Page Jump Listener
+        document.getElementById("pageJumpInput").addEventListener("change", (e) => {
+            let targetPage = parseInt(e.target.value, 10);
+            let maxPage = parseInt(e.target.max, 10) || 1;
+            
+            // Revert invalid entries
+            if (isNaN(targetPage) || targetPage < 1) {
+                targetPage = 1;
+            } else if (targetPage > maxPage) {
+                targetPage = maxPage;
+            }
+            
+            currentPage = targetPage;
+            renderPaginatedData();
+        });
+    });
+
+</script>
+<!-- END JS ============================================= -->
 
 </body>
 </html>

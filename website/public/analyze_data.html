@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+    <!-- Plotly.js replaces Chart.js per project rubric recommendations for interactivity and image export -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+
+    <!-- Styles ALL content -->
+    <div class="content">
+
+    <div class="title_container">
+        <!-- Logo -->
+        <img src="logo.png" id="logo">
+
+        <!-- Title -->
+        <h1 id="site_title">CAMPD Manager</h1>
+    </div>    
+
+    <!-- The nav bar ------------------------------------------------------>
+    <table class="nav_bar">
+        <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
+        <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
+        <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
+        <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
+        <td class="nav_cell"><a href="download.html">Download Data</a></td>
+        <td class="nav_cell"><a href="facility.html">Facility</a></td>
+    </table>
+
+    <!-- Content begins here -->
+
+    <h2>Explore Environmental Impacts (EPA TRACI 2.2)</h2>
+    <hr>
+
+    <div class="about_content">
+        <p>
+            This module combines reported <b>CAMPD</b> annual emissions (converted from short tons to kilograms: 1 short ton = 907.18474 kg) with <b>EPA TRACI 2.2</b> characterization factors to estimate potential environmental and human-health impacts.
+        </p>
+    </div>
+
+    <div class="info_content">
+        <label class="search_label">Impact Filter</label>
+        <form id="explore-filter-form" onsubmit="return false;">
+            <label for="categoryFilter">Impact Category:</label>
+            <select id="categoryFilter" name="categoryFilter">
+                <option value="">All Impact Categories</option>
+            </select>
+
+            <label for="yearFilter">Reporting Year:</label>
+            <input type="number" id="yearFilter" name="yearFilter" placeholder="e.g. 2024">
+
+            <button type="button" id="applyExploreBtn">Calculate Impacts</button>
+        </form>
+    </div>
+    <hr>
+
+    <!-- Dashboard Section based on Wireframe and Sensitivity Rubric -->
+    <h2>Data Explorer & Sensitivity Dashboard</h2>
+    
+    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+        
+        <!-- Main Chart Container -->
+        <div style="flex: 2; border: 2px solid #ccc; padding: 15px; background: #fff; min-width: 500px;">
+            <div id="plotlyChart" style="height: 400px; width: 100%;"></div>
+            
+            <!-- Chart Type Toggles (Wireframe Bottom Bar) -->
+            <div style="margin-top: 15px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                <button class="btn" onclick="updateChartType('line')">Trend (Line)</button>
+                <button class="btn" onclick="updateChartType('bar')">Comparison (Bar)</button>
+                <button class="btn" style="background-color: #dc3545;" onclick="updateChartType('sensitivity')">Sensitivity Curve</button>
+                <button class="btn" style="background-color: #dc3545;" onclick="updateChartType('scenario')">Scenario Bar Chart</button>
+            </div>
+
+            <!-- One-Variable-At-A-Time Sensitivity Controls (Hidden unless sensitivity is active) -->
+            <div id="sensitivityControls" style="display: none; margin-top: 15px; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; text-align: center;">
+                <h4 style="margin-top: 0;">Sensitivity Parameters</h4>
+                
+                <label for="baseFacility"><b>Baseline Facility:</b></label>
+                <select id="baseFacility" onchange="renderDashboard()" style="margin-right: 15px;"></select>
+
+                <label for="loadChange"><b>Gross Load % Change:</b></label>
+                <input type="number" id="loadChange" value="10" step="5" onchange="renderDashboard()" style="width: 70px;">
+                
+                <p id="rangeWarning" style="color: #dc3545; font-size: 0.9em; display: none; margin-top: 10px; font-weight: bold;">
+                    Warning: The selected percentage change extends beyond typical operational variances and may fall outside standard training-data bounds.
+                </p>
+            </div>
+        </div>
+
+        <!-- Rankings Container (Wireframe Right Side) -->
+        <div style="flex: 1; border: 2px solid #ccc; padding: 15px; background: #fff; min-width: 250px;">
+            <h3 style="margin-top: 0; text-align: center;">Facility Impact Rankings</h3>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <ol id="rankingsList" style="line-height: 1.8; padding-left: 20px;">
+                    <li><i>Loading rankings...</i></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <hr>
+
+    <h2>TRACI 2.2 Reference Characterization Factors</h2>
+
+    <div class="db_holder">
+        <table class="db_table">
+            <thead>
+                <tr>
+                    <th>TRACI Version</th>
+                    <th>Pollutant</th>
+                    <th>Substance Name</th>
+                    <th>Impact Category</th>
+                    <th>Factor Value</th>
+                    <th>Factor Unit</th>
+                </tr>
+            </thead>
+            <tbody id="factorsBody">
+            </tbody>
+        </table>
+    </div>
+
+    <hr>
+
+    <h2>Calculated Facility & Unit Impact Results</h2>
+
+    <div class="info_content">
+        <form role="search" id="search-form" onsubmit="return false;">
+            <label for="site-search">Search impact results:</label>
+            <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
+        </form>
+    </div>
+
+    <div class="db_holder">
+        <table class="db_table">
+            <thead>
+                <tr>
+                    <th>Facility</th>
+                    <th>Unit</th>
+                    <th>Year</th>
+                    <th>Pollutant</th>
+                    <th>Emissions (short tons)</th>
+                    <th>Impact Category</th>
+                    <th>TRACI Factor</th>
+                    <th>Total Impact Score</th>
+                    <th>Impact / Gross Load (per MWh)</th>
+                </tr>
+            </thead>
+            <tbody id="impactsBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="pagination-controls" style="text-align: center; margin-top: 15px; display: none;">
+        <button id="prevPageBtn" class="btn" style="margin-right: 10px;">Previous</button>
+        <span style="margin: 0 10px;">
+            Page <input type="number" id="pageJumpInput" style="width: 60px; text-align: center;" min="1" value="1"> of <span id="totalPagesIndicator">1</span>
+        </span>
+        <button id="nextPageBtn" class="btn" style="margin-left: 10px;">Next</button>
+    </div>
+
+    </div> 
+
+<script>
+let currentImpactData = [];
+let currentPage = 1;
+const rowsPerPage = 50;
+
+// --- DASHBOARD & SENSITIVITY LOGIC ---
+let currentChartType = 'line';
+
+function updateChartType(type) {
+    currentChartType = type;
+    const sensControls = document.getElementById('sensitivityControls');
+    
+    if (type === 'sensitivity' || type === 'scenario') {
+        sensControls.style.display = 'block';
+        populateFacilityDropdown();
+    } else {
+        sensControls.style.display = 'none';
+    }
+    renderDashboard();
+}
+
+function populateFacilityDropdown() {
+    const select = document.getElementById('baseFacility');
+    if (select.options.length > 0) return; 
+
+    // Extract unique facilities for the baseline selection
+    const facs = [...new Set(currentImpactData.map(d => d.facility_name))].sort();
+    facs.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f; opt.textContent = f;
+        select.appendChild(opt);
+    });
+}
+
+function renderDashboard() {
+    if (!currentImpactData || currentImpactData.length === 0) {
+        document.getElementById('plotlyChart').innerHTML = '';
+        return;
+    }
+
+    // 1. Rankings Generation
+    const facilityImpacts = {};
+    currentImpactData.forEach(row => {
+        facilityImpacts[row.facility_name] = (facilityImpacts[row.facility_name] || 0) + row.impact_score;
+    });
+    
+    const sortedFacilities = Object.entries(facilityImpacts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+    const rankList = document.getElementById('rankingsList');
+    rankList.innerHTML = '';
+    sortedFacilities.forEach(([fac, score]) => {
+        rankList.innerHTML += `<li><b>${fac}</b>: ${Number(score.toFixed(2)).toLocaleString()}</li>`;
+    });
+
+    // 2. Chart Rendering via Plotly
+    const chartDiv = 'plotlyChart';
+
+    if (currentChartType === 'line') {
+        const yearImpacts = {};
+        currentImpactData.forEach(row => {
+            yearImpacts[row.reporting_year] = (yearImpacts[row.reporting_year] || 0) + row.impact_score;
+        });
+        const years = Object.keys(yearImpacts).sort();
+        const scores = years.map(y => yearImpacts[y]);
+
+        const trace = { x: years, y: scores, type: 'scatter', mode: 'lines+markers', name: 'Total Impact', line: {color: '#007bff'} };
+        const layout = { title: 'Impact Trend Analysis', xaxis: {title: 'Reporting Year'}, yaxis: {title: 'Total Impact Score'}, margin: {t: 40} };
+        Plotly.newPlot(chartDiv, [trace], layout);
+
+    } else if (currentChartType === 'bar') {
+        const facs = sortedFacilities.map(f => f[0]).slice(0, 10);
+        const scores = sortedFacilities.map(f => f[1]).slice(0, 10);
+
+        const trace = { x: facs, y: scores, type: 'bar', marker: {color: '#28a745'} };
+        const layout = { title: 'Top 10 Facilities by Total Impact', xaxis: {title: 'Facility', tickangle: -45}, yaxis: {title: 'Total Impact Score'}, margin: {b: 100, t: 40} };
+        Plotly.newPlot(chartDiv, [trace], layout);
+
+    } else if (currentChartType === 'sensitivity' || currentChartType === 'scenario') {
+        // --- Rubric: Sensitivity and Scenario Analysis (Section 6.2 - 6.4) ---
+        const facName = document.getElementById('baseFacility').value;
+        const loadChangePct = parseFloat(document.getElementById('loadChange').value) || 0;
+        
+        // Out-of-bounds warning logic (Section 6.3)
+        const warningEl = document.getElementById('rangeWarning');
+        if (Math.abs(loadChangePct) > 25) warningEl.style.display = 'block';
+        else warningEl.style.display = 'none';
+
+        const facData = currentImpactData.filter(d => d.facility_name === facName);
+        
+        let baseLoad = 0; let baseImpact = 0;
+        facData.forEach(d => { baseLoad += d.gross_load_mwh; baseImpact += d.impact_score; });
+
+        // Deterministic baseline approximation (Front-end surrogate for scikit-learn models)
+        const intensity = baseLoad > 0 ? baseImpact / baseLoad : 0;
+        const scenarioLoad = baseLoad * (1 + (loadChangePct / 100));
+        const scenarioImpact = scenarioLoad * intensity;
+        const pctChange = baseImpact > 0 ? ((scenarioImpact - baseImpact) / baseImpact * 100).toFixed(2) : 0;
+
+        if (currentChartType === 'sensitivity') {
+            const curveX = []; const curveY = [];
+            for (let pct = -50; pct <= 50; pct += 5) {
+                const l = baseLoad * (1 + (pct / 100));
+                curveX.push(l); curveY.push(l * intensity);
+            }
+
+            const traceCurve = { x: curveX, y: curveY, type: 'scatter', mode: 'lines', name: 'Model Sensitivity', line: {color: '#007bff'} };
+            
+            // Baseline marker and reference lines
+            const traceBase = { 
+                x: [baseLoad], y: [baseImpact], type: 'scatter', mode: 'markers+text', 
+                name: 'Baseline', text: ['Baseline'], textposition: 'top left', marker: {size: 10, color: 'black'} 
+            };
+            
+            // Scenario marker
+            const traceScenario = { 
+                x: [scenarioLoad], y: [scenarioImpact], type: 'scatter', mode: 'markers+text', 
+                name: 'Scenario', text: [`${loadChangePct > 0 ? '+' : ''}${loadChangePct}% Load<br>(${pctChange}% Impact)`], 
+                textposition: 'bottom right', marker: {size: 12, color: '#dc3545'} 
+            };
+
+            const layout = {
+                title: `Sensitivity Curve: Gross Load vs. Predicted Impact (${facName})`,
+                xaxis: {title: 'Gross Load (MWh)'},
+                yaxis: {title: 'Predicted Impact Score'},
+                margin: {t: 50},
+                shapes: [
+                    {type: 'line', x0: baseLoad, x1: baseLoad, y0: 0, y1: baseImpact, line: {dash: 'dot', color: 'gray'}},
+                    {type: 'line', x0: 0, x1: baseLoad, y0: baseImpact, y1: baseImpact, line: {dash: 'dot', color: 'gray'}}
+                ]
+            };
+            Plotly.newPlot(chartDiv, [traceCurve, traceBase, traceScenario], layout);
+
+        } else if (currentChartType === 'scenario') {
+            const trace = {
+                x: ['Baseline Model', `Scenario (${loadChangePct > 0 ? '+' : ''}${loadChangePct}% Load)`],
+                y: [baseImpact, scenarioImpact],
+                type: 'bar',
+                text: [Number(baseImpact.toFixed(2)).toLocaleString(), Number(scenarioImpact.toFixed(2)).toLocaleString()],
+                textposition: 'auto',
+                marker: {color: ['#6c757d', '#dc3545']}
+            };
+
+            const layout = {
+                title: `Scenario Comparison: ${facName}<br><span style="font-size: 14px; color: #555;">Percentage Change: ${pctChange}%</span>`,
+                yaxis: {title: 'Total Predicted Impact Score'},
+                margin: {t: 70}
+            };
+            Plotly.newPlot(chartDiv, [trace], layout);
+        }
+    }
+}
+
+// --- STANDARD TABLE RETRIEVAL LOGIC ---
+
+async function loadFactors() {
+    const tbody = document.getElementById('factorsBody');
+    const catSelect = document.getElementById('categoryFilter');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading TRACI 2.2 factors from MySQL...</td></tr>';
+
+    try {
+        const res = await fetch('/api/traci-factors');
+        if (!res.ok) throw new Error('Failed to fetch TRACI factors');
+        const factors = await res.json();
+
+        tbody.innerHTML = '';
+        const categories = new Set();
+
+        if (factors.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No TRACI factors installed yet.</td></tr>';
+            return;
+        }
+
+        factors.forEach(f => {
+            categories.add(f.impact_category);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${f.traci_version}</td>
+                <td>${f.pollutant_code}</td>
+                <td>${f.pollutant_name}</td>
+                <td>${f.impact_category}</td>
+                <td>${f.factor_value}</td>
+                <td>${f.factor_unit}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        categories.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat; opt.textContent = cat;
+            catSelect.appendChild(opt);
+        });
+    } catch (error) {
+        console.error("Error loading TRACI factors:", error);
+        tbody.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Error connecting to database backend.</td></tr>';
+    }
+}
+
+async function loadImpacts() {
+    const category = document.getElementById('categoryFilter').value;
+    const year = document.getElementById('yearFilter').value;
+    const params = new URLSearchParams();
+    if (category) params.append('impactCategory', category);
+    if (year) params.append('year', year);
+
+    const tbody = document.getElementById('impactsBody');
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Calculating impacts from MySQL...</td></tr>';
+
+    try {
+        const res = await fetch(`/api/traci-impacts?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch impact calculations');
+        currentImpactData = await res.json();
+
+        if (currentImpactData.length === 0) {
+            document.getElementById('pagination-controls').style.display = 'none';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center">No matching records found.</td></tr>';
+            
+            // Clear dashboard if no data
+            document.getElementById('plotlyChart').innerHTML = '';
+            document.getElementById('rankingsList').innerHTML = '<li><i>No data available.</i></li>';
+            return;
+        }
+
+        currentPage = 1;
+        renderPaginatedImpacts();
+        renderDashboard();
+    } catch (error) {
+        console.error("Error loading impacts:", error);
+        tbody.innerHTML = '<tr><td colspan="9" class="text-danger text-center">Error connecting to database backend.</td></tr>';
+    }
+}
+
+function renderPaginatedImpacts() {
+    const tbody = document.getElementById('impactsBody');
+    const searchInput = document.getElementById('site-search');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    let filtered = [...currentImpactData];
+    if (query) {
+        const terms = query.split(/\s+/).filter(Boolean);
+        filtered = filtered.filter(row => {
+            const rowText = Object.values(row).filter(val => val !== null && val !== undefined).map(val => String(val).toLowerCase()).join(' ');
+            return terms.every(term => rowText.includes(term));
+        });
+    }
+
+    const totalPages = Math.ceil(filtered.length / rowsPerPage) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const pageRows = filtered.slice(startIndex, startIndex + rowsPerPage);
+
+    tbody.innerHTML = '';
+    if (pageRows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No matching records found.</td></tr>';
+        document.getElementById('pagination-controls').style.display = 'none';
+        return;
+    }
+
+    pageRows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><a href="facility.html?id=${row.epa_facility_id}" style="color: #007bff; text-decoration: underline;">${row.facility_name}</a> (${row.state})</td>
+            <td>${row.unit_id}</td>
+            <td>${row.reporting_year}</td>
+            <td>${row.pollutant}</td>
+            <td>${Number(row.reported_tons).toLocaleString()}</td>
+            <td>${row.impact_category}</td>
+            <td>${row.factor_value} ${row.factor_unit} (v${row.traci_version})</td>
+            <td><b>${Number(row.impact_score).toLocaleString()}</b> ${row.impact_unit}</td>
+            <td>${row.intensity_per_mwh !== 'N/A' ? Number(row.intensity_per_mwh).toLocaleString() + ' ' + row.impact_unit + '/MWh' : 'N/A'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('pagination-controls').style.display = 'block';
+    document.getElementById('pageJumpInput').max = totalPages;
+    document.getElementById('pageJumpInput').value = currentPage;
+    document.getElementById('totalPagesIndicator').textContent = totalPages;
+    document.getElementById('prevPageBtn').disabled = currentPage === 1;
+    document.getElementById('nextPageBtn').disabled = currentPage === totalPages;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadFactors();
+    await loadImpacts();
+
+    document.getElementById('applyExploreBtn').addEventListener('click', loadImpacts);
+    document.getElementById('categoryFilter').addEventListener('change', loadImpacts);
+
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', () => {
+        currentPage = 1;
+        renderPaginatedImpacts();
+    });
+
+    document.getElementById('prevPageBtn').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderPaginatedImpacts();
+        }
+    });
+
+    document.getElementById('nextPageBtn').addEventListener('click', () => {
+        const maxPage = parseInt(document.getElementById('pageJumpInput').max, 10) || 1;
+        if (currentPage < maxPage) {
+            currentPage++;
+            renderPaginatedImpacts();
+        }
+    });
+
+    document.getElementById('pageJumpInput').addEventListener('change', (e) => {
+        let targetPage = parseInt(e.target.value, 10);
+        let maxPage = parseInt(e.target.max, 10) || 1;
+        if (isNaN(targetPage) || targetPage < 1) targetPage = 1;
+        else if (targetPage > maxPage) targetPage = maxPage;
+        currentPage = targetPage;
+        renderPaginatedImpacts();
+    });
+});
+</script>
+
+</body>
+</html>

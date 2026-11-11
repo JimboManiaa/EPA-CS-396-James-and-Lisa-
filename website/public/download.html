@@ -3,10 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download Data</title>
+    <title>Download</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
 </head>
 <body>
+
+    <!-- Styles ALL content -->
+    <div class="content">
+
+    <div class="title_container">
+        <!-- Logo -->
+        <img src="logo.png" id="logo">
+
+        <!-- Title -->
+        <h1 id="site_title">CAMPD Manager</h1>
+    </div>    
+
+    <!-- The nav bar ------------------------------------------------------>
+    <table class="nav_bar">
+        <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
+        <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
+        <td class="nav_cell"><a href="analyze_data.html">Analyze Data</a></td>
+        <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
+        <td class="nav_cell"><a href="download.html">Download Data</a></td>
+        <td class="nav_cell"><a href="facility.html">Facility</a></td>
+    </table>
+
+    <h2>Download Data</h2>
+    <hr>
+
+    <div class="info_content">
+        <p>Would you like to download <u>ALL</u> onsite data?</p>
+
+        <!-- Download buttons -->
+        <button type="button" id="downloadCsv">Download as .csv file</button>
+        <button type="button" id="downloadXlsx">Download as .xlsx file</button>
+
+    </div>
+    <hr>
+
+    <!-- Script to get the files ======================================-->
+    <script>
+    document.getElementById("downloadCsv").addEventListener("click", () => {
+        window.location.href = "/api/download/annual_records?format=csv";
+    });
+
+    document.getElementById("downloadXlsx").addEventListener("click", () => {
+        window.location.href = "/api/download/annual_records?format=xlsx";
+    });
+    </script>
+
+
+    <!-- Download a specific table-->
+    <div class="container my-5">
+    <h2>Download Database Tables</h2>
+
+    <p>Select a table below to download its contents as a .csv or .xlsx file</p>
     
+<<<<<<< HEAD
     <p>This is the download data page.</p>
     <div class="container my-5">
     <h2>Download Database Tables</h2>
@@ -17,6 +72,124 @@
         <a href="/api/download/units" class="list-group-item list-group-item-action">Download Units Table (CSV)</a>
         <a href="/api/download/hourly_emissions" class="list-group-item list-group-item-action">Download Hourly Emissions Table (CSV)</a>
     </div>
+=======
+    <!-- Search Bar -->
+     <!-- Search Bar -->
+        <form role="search" id="search-form" onsubmit="return false;">
+            <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
+        </form>
+
+    <!-- Datasets Section -->
+
+    <div class="db_holder">
+        <table class="db_table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>File Name</th>
+                    <th>Source</th>
+                    <th>Date Installed</th>
+                    <th>Record Count</th>
+                    <th>Installation</th>
+                </tr>
+            </thead>
+
+                <tbody id="tableBody">
+                </tbody>
+
+            </table>
+    </div>
+
+    </div>
+
+<script>
+
+    let currentData = [];
+
+    async function loadDatabaseTable() {
+        const tableBody = document.getElementById("tableBody");
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center">Loading live data from MySQL...</td></tr>`;
+
+        try {
+            const response = await fetch('/api/datasets');
+            if (!response.ok) throw new Error('Failed to fetch data from server');
+            
+            currentData = await response.json();
+            
+            tableBody.innerHTML = ""; // Clear loading message
+
+            if (currentData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center">No datasets installed yet.</td></tr>`;
+                return;
+            }
+
+            renderRows(currentData);
+
+        } catch (error) {
+            console.error("Error loading table data:", error);
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-danger text-center">Error connecting to database backend.</td></tr>`;
+        }
+    }
+
+    function renderRows(data) {
+        const tableBody = document.getElementById("tableBody");
+        tableBody.innerHTML = "";
+        
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="6" class="text-center">No matching records found.</td></tr>`;
+            return;
+        }
+
+        data.forEach(entry => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${entry.id}</td>
+                <td>${entry.name}</td>
+                <td>${entry.facility}</td>
+                <td>${entry.date}</td>
+                <td><span class="badge bg-success">${entry.status}</span></td>
+                <td><button type="button" onclick="window.location.href='/api/download/dataset/${entry.id}'" style="padding: 5px 10px; cursor: pointer;">Download CSV</button></td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    // Load live data on page load
+    loadDatabaseTable();
+
+    // Instant multi-keyword search filter
+    const searchInput = document.getElementById("site-search");
+    const searchForm = document.getElementById("search-form");
+
+    searchInput.addEventListener("input", (e) => {
+        const rawQuery = e.target.value.toLowerCase().trim();
+        if (!currentData || currentData.length === 0) return;
+
+        if (!rawQuery) {
+            renderRows(currentData);
+            return;
+        }
+
+        const terms = rawQuery.split(/\s+/).filter(Boolean);
+
+        const filtered = currentData.filter(entry => {
+            const rowText = Object.values(entry)
+                .filter(val => val !== null && val !== undefined)
+                .map(val => String(val).toLowerCase())
+                .join(" ");
+
+            return terms.every(term => rowText.includes(term));
+        });
+
+        renderRows(filtered);
+    });
+
+    searchForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+    });
+
+</script>
+>>>>>>> 471806f
 </div>
 
 </body>
