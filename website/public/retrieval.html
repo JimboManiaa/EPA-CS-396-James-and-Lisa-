@@ -20,15 +20,16 @@
         <h1 id="site_title">CAMPD Manager</h1>
     </div>    
 
-    <!-- The nav bar ------------------------------------------------------>
-    <table class="nav_bar">
-        <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
-        <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
-        <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
-        <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
-        <td class="nav_cell"><a href="download.html">Download Data</a></td>
-        <td class="nav_cell"><a href="facility.html">Facility</a></td>
-    </table>
+        <!-- The nav bar ------------------------------------------------------>
+        <table class="nav_bar">
+            <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
+            <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
+            <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
+            <td class="nav_cell"><a href="analyze_data.html">Analyze Data</a></td>
+            <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
+            <td class="nav_cell"><a href="download.html">Download Data</a></td>
+            <td class="nav_cell"><a href="facility.html">Facility</a></td>
+        </table>
 
     <h2>Data Retreival</h2>
     <hr>
@@ -104,11 +105,7 @@
                     <!-- date to -->
                     <label for="end">Date To:</label><br>
                     <!-- Date input field -->
-<<<<<<< HEAD
-                    <input type="date" id="end" name="end" value="" min="1997-01-01" max="2030-12-31">
-=======
                     <input type="date" id="end" name="end" value="2030-12-31" min="1997-01-01" max="2030-12-31">
->>>>>>> 471806f
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
@@ -246,13 +243,6 @@
     <!-- BASIC SEARCH ======================================-->
     <div class="info_content">
 
-<<<<<<< HEAD
-        <!-- Search Bar -->
-        <form role="search" id="search-form" onsubmit="return false;">
-            <label for="site-search">Search the database:</label>
-            <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
-            <button type="submit" id="search-btn">Search</button>
-=======
         <label class="search_label">Basic Search</label>
 
         <!-- BASIC Search Bar -->
@@ -260,7 +250,6 @@
             <label for="site-search">Search the database:</label>
             <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
             <!--<button type="submit">Search</button>-->
->>>>>>> 471806f
         </form>
     </div>
 
@@ -284,15 +273,6 @@
     <br>
 
     <!-- Datasets Section ----------------------------------------->
-<<<<<<< HEAD
-    <div class="db_holder">
-        <table class="db_table">
-            <thead id="tableHead">
-                <!-- JavaScript will populate the headers-->
-            </thead>
-            <tbody id="tableBody">
-                <!-- JavaScript will put the rows here -->
-=======
     
     <!-- Filtered Download Button -->
     <div style="text-align: right; margin-bottom: 10px; margin-right: 20px;">
@@ -306,7 +286,6 @@
             <thead id="tableHead">
             </thead>
             <tbody id="tableBody">
->>>>>>> 471806f
             </tbody>
         </table>
     </div>
@@ -323,8 +302,6 @@
     </div>
 
 <script>
-<<<<<<< HEAD
-=======
         document.getElementById("clear-filters-btn").addEventListener("click", async () => {
             // Reset standard dates and dropdowns
             document.getElementById("start").value = "2000-01-01";
@@ -407,7 +384,6 @@
         }
     });
 
->>>>>>> 471806f
     // Initialize Dual Slider sync
     function setupDualSlider(sliderFromId, sliderToId, inputFromId, inputToId, onUpdate) {
         const fromSlider = document.getElementById(sliderFromId);
@@ -499,27 +475,17 @@
 
     // Main fetch & render function
     let currentData = [];
-<<<<<<< HEAD
-=======
     let sortCol = null;
     let sortOrder = 'none'; // ascending descending and neither option
     
     // Pagination Variables
     let currentPage = 1;
     const rowsPerPage = 50;
->>>>>>> 471806f
 
     async function loadDatabaseTable() {
         const tableBody = document.getElementById("tableBody");
-<<<<<<< HEAD
-
         tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading live data from MySQL...</td></tr>`;
 
-        // Build query string from filter inputs
-=======
-        tableBody.innerHTML = `<tr><td colspan="5" class="text-center">Loading live data from MySQL...</td></tr>`;
-
->>>>>>> 471806f
         const params = new URLSearchParams();
 
         const startDate = document.getElementById("start").value;
@@ -538,49 +504,25 @@
         if (sFuel) params.append('secondaryFuel', sFuel);
         if (progCode) params.append('programCode', progCode);
 
-<<<<<<< HEAD
-        // Sliders
-        const opTimeMin = document.getElementById("fromInput_opTime")?.value;
-        const opTimeMax = document.getElementById("toInput_opTime")?.value;
-        if (opTimeMin) params.append('minOpTime', opTimeMin);
-        if (opTimeMax) params.append('maxOpTime', opTimeMax);
-
-        const grossMin = document.getElementById("fromInput_grossLoad")?.value;
-        const grossMax = document.getElementById("toInput_grossLoad")?.value;
-        if (grossMin) params.append('minGrossLoad', grossMin);
-=======
         // Sliders 
         const grossMin = document.getElementById("fromInput_grossLoad")?.value;
         const grossMax = document.getElementById("toInput_grossLoad")?.value;
         if (grossMin && Number(grossMin) > 0) params.append('minGrossLoad', grossMin);
->>>>>>> 471806f
         if (grossMax) params.append('maxGrossLoad', grossMax);
 
         const co2Min = document.getElementById("fromInput_co2")?.value;
         const co2Max = document.getElementById("toInput_co2")?.value;
-<<<<<<< HEAD
-        if (co2Min) params.append('minCO2', co2Min);
-=======
         if (co2Min && Number(co2Min) > 0) params.append('minCO2', co2Min);
->>>>>>> 471806f
         if (co2Max) params.append('maxCO2', co2Max);
 
         const noxMin = document.getElementById("fromInput_nox")?.value;
         const noxMax = document.getElementById("toInput_nox")?.value;
-<<<<<<< HEAD
-        if (noxMin) params.append('minNOx', noxMin);
-=======
         if (noxMin && Number(noxMin) > 0) params.append('minNOx', noxMin);
->>>>>>> 471806f
         if (noxMax) params.append('maxNOx', noxMax);
 
         const so2Min = document.getElementById("fromInput_so2")?.value;
         const so2Max = document.getElementById("toInput_so2")?.value;
-<<<<<<< HEAD
-        if (so2Min) params.append('minSO2', so2Min);
-=======
         if (so2Min && Number(so2Min) > 0) params.append('minSO2', so2Min);
->>>>>>> 471806f
         if (so2Max) params.append('maxSO2', so2Max);
 
         try {
@@ -592,32 +534,13 @@
             tableBody.innerHTML = "";
 
             if (currentData.length === 0) {
-<<<<<<< HEAD
-=======
                 document.getElementById("pagination-controls").style.display = "none";
->>>>>>> 471806f
                 tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No matching records found.</td></tr>`;
                 return;
             }
 
-<<<<<<< HEAD
-            const columns = Object.keys(currentData[0]);
-
-            // Create table headers
-            tableHead.innerHTML = "";
-            const headerRow = document.createElement("tr");
-            columns.forEach(column => {
-                const th = document.createElement("th");
-                th.textContent = formatColumnName(column);
-                headerRow.appendChild(th);
-            });
-            tableHead.appendChild(headerRow);
-
-            renderRows(currentData, columns);
-=======
             currentPage = 1;
             renderSortedData();
->>>>>>> 471806f
 
         } catch (error) {
             console.error("Error loading table data:", error);
@@ -631,8 +554,6 @@
         if (dataToRender.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="${columns.length}" class="text-center">No matching records found.</td></tr>`;
             return;
-<<<<<<< HEAD
-=======
         }
         dataToRender.forEach(entry => {
             const row = document.createElement("tr");
@@ -714,66 +635,8 @@
                     .join(" ");
                 return terms.every(term => rowText.includes(term));
             });
->>>>>>> 471806f
         }
-        dataToRender.forEach(entry => {
-            const row = document.createElement("tr");
-            columns.forEach(column => {
-                const cell = document.createElement("td");
-                cell.textContent = entry[column] !== null ? entry[column] : "";
-                row.appendChild(cell);
-            });
-            tableBody.appendChild(row);
-        });
-    }
 
-<<<<<<< HEAD
-    function formatColumnName(column) {
-        return column
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, letter => letter.toUpperCase());
-    }
-
-    // Attach listeners on load
-    document.addEventListener("DOMContentLoaded", () => {
-        loadFilterDropdowns();
-        loadDatabaseTable();
-
-        // Attach reload on input changes
-        const changeElements = [
-            'start', 'end', 
-            'facility_name_select', 'db_id_select', 
-            'p_fuel', 's_fuel', 'program_code_select'
-        ];
-        changeElements.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('change', loadDatabaseTable);
-        });
-
-        // Initialize all 5 dual sliders
-        setupDualSlider('fromSlider_opTime', 'toSlider_opTime', 'fromInput_opTime', 'toInput_opTime', loadDatabaseTable);
-        setupDualSlider('fromSlider_grossLoad', 'toSlider_grossLoad', 'fromInput_grossLoad', 'toInput_grossLoad', loadDatabaseTable);
-        setupDualSlider('fromSlider_co2', 'toSlider_co2', 'fromInput_co2', 'toInput_co2', loadDatabaseTable);
-        setupDualSlider('fromSlider_nox', 'toSlider_nox', 'fromInput_nox', 'toInput_nox', loadDatabaseTable);
-        setupDualSlider('fromSlider_so2', 'toSlider_so2', 'fromInput_so2', 'toInput_so2', loadDatabaseTable);
-
-        // Instant text search filter
-        const searchInput = document.getElementById("site-search");
-        const searchForm = document.getElementById("search-form");
-        
-        searchInput.addEventListener("input", (e) => {
-            const query = e.target.value.toLowerCase();
-            if (!currentData || currentData.length === 0) return;
-            const columns = Object.keys(currentData[0]);
-            const filtered = currentData.filter(entry => 
-                Object.values(entry).some(val => 
-                    val !== null && String(val).toLowerCase().includes(query)
-                )
-            );
-            renderRows(filtered, columns);
-        });
-
-=======
         // Apply sort
         if (sortOrder !== 'none' && sortCol) {
             dataToRender.sort((a, b) => {
@@ -895,13 +758,10 @@
             renderSortedData();
         });
 
->>>>>>> 471806f
         searchForm.addEventListener("submit", (e) => {
             e.preventDefault();
             loadDatabaseTable();
         });
-<<<<<<< HEAD
-=======
 
         // Pagination Buttons
         document.getElementById("prevPageBtn").addEventListener("click", () => {
@@ -1020,7 +880,6 @@
             link.click();
             document.body.removeChild(link);
         });
->>>>>>> 471806f
     });
 </script>
 
