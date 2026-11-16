@@ -103,20 +103,31 @@ app.get('/api/datasets', async (req, res) => {
 app.get('/api/datasets/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const facility = await Facility.findByPk(id, {
-      include: [
-        {
-          model: Unit,
-          include: [AnnualRecord]
-        }
-      ]
-    });
-
-    if (!facility) {
-      return res.status(404).json({ error: 'Dataset/Facility not found' });
+    const dataset = await Dataset.findByPk(id);
+    
+    if (!dataset) {
+      return res.status(404).json({ error: 'Dataset not found' });
     }
 
-    res.json(facility);
+    // Query records belonging to the specific dataset_id, including related tables
+    let records = await AnnualRecord.findAll({
+      where: { dataset_id: id },
+      include: [{ model: Unit, include: [Facility] }]
+    });
+
+    // Fallback for initial seeded data which may not have dataset_id explicitly linked
+    if (records.length === 0 && dataset.reporting_year) {
+       records = await AnnualRecord.findAll({
+         where: { reporting_year: dataset.reporting_year },
+         include: [{ model: Unit, include: [Facility] }]
+       });
+    }
+
+    if (!records || records.length === 0) {
+      return res.status(404).json({ error: 'No records found for this dataset' });
+    }
+
+    res.json({ records });
   } catch (error) {
     console.error("Failed to fetch dataset details:", error);
     res.status(500).json({ error: "Internal Server Error" });
