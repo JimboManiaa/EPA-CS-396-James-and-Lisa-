@@ -13,17 +13,14 @@ import {
 } from './node_models.mjs';
 import multer from 'multer';
 import fs from 'fs';
-//import { GoogleGenAI } from '@google/genai';
 import XLSX from 'xlsx';
 import Groq from 'groq-sdk';
+
+dotenv.config();
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-// Initialize Gemini client 
-//const ai = new GoogleGenAI();
 
 // Configure multer to save files to uploads
 const upload = multer({ dest: 'uploads/' });
-
-dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,64 +42,8 @@ app.get('/', (req, res) => res.sendFile(path.join(publicPath, 'index.html')));
 app.get('/index.html', (req, res) => res.sendFile(path.join(publicPath, 'index.html')));
 app.get('/explore.html', (req, res) => res.sendFile(path.join(publicPath, 'explore.html')));
 
-<<<<<<< HEAD
-app.get('/index.html', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
-});
-
-app.get('/explore.html', (req, res) => {
-  res.sendFile(path.join(publicPath, 'explore.html'));
-});
-
 // 3. API Route for unique dropdown filter options
 app.get('/api/filter-options', async (req, res) => {
-  try {
-    const facilities = await Facility.findAll({
-      attributes: ['epa_facility_id', 'facility_name'],
-      raw: true
-    });
-
-    const facilityNames = [...new Set(facilities.map(f => f.facility_name).filter(Boolean))].sort();
-    const databaseIds = [...new Set(facilities.map(f => f.epa_facility_id).filter(Boolean))].sort();
-
-    let primaryFuels = [];
-    let secondaryFuels = [];
-    let programCodes = [];
-
-    try {
-      const fuels = await UnitFuel.findAll({ raw: true });
-      primaryFuels = [...new Set(fuels.map(f => f.fuel_type || f.primary_fuel_type).filter(Boolean))].sort();
-      secondaryFuels = [...new Set(fuels.map(f => f.secondary_fuel_type).filter(Boolean))].sort();
-    } catch (e) {
-      console.warn("Could not query UnitFuel for dropdowns:", e.message);
-    }
-
-    try {
-      const units = await Unit.findAll({ raw: true });
-      programCodes = [...new Set(units.map(u => u.program_code).filter(Boolean))].sort();
-    } catch (e) {
-      console.warn("Could not query Unit for program codes:", e.message);
-    }
-
-    res.json({
-      facilityNames,
-      databaseIds,
-      primaryFuels,
-      secondaryFuels,
-      programCodes
-    });
-  } catch (error) {
-    console.error("Failed to load filter options:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-// 4. API Route for installed datasets list (Homepage)
-app.get('/api/datasets', async (req, res) => {
-=======
-// dropdown filters
-app.get('/api/filter-options', async (req, res) => {
->>>>>>> 471806f
   try {
     const facilities = await Facility.findAll({
       attributes: ['epa_facility_id', 'facility_name'],
@@ -122,7 +63,7 @@ app.get('/api/filter-options', async (req, res) => {
       secondaryFuels = [...new Set(units.map(u => u.secondary_fuel).filter(Boolean))].sort();
       programCodes = [...new Set(units.map(u => u.unit_type).filter(Boolean))].sort(); 
     } catch (e) {
-      console.warn("Could not query Unit for program codes:", e.message);
+      console.warn("Could not query Unit for filters:", e.message);
     }
 
     res.json({
@@ -138,7 +79,7 @@ app.get('/api/filter-options', async (req, res) => {
   }
 });
 
-// installed datasets routes
+// 4. API Route for installed datasets list (Homepage)
 app.get('/api/datasets', async (req, res) => {
   try {
     const datasets = await Dataset.findAll({ limit: 10 });
@@ -158,11 +99,7 @@ app.get('/api/datasets', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 // 5. API Route to get full normalized details for a specific dataset/facility
-=======
-// API Route to get full normalized details for a specific dataset/facility
->>>>>>> 471806f
 app.get('/api/datasets/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -186,9 +123,6 @@ app.get('/api/datasets/:id', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// 6. Filterable Retrieval Route
-=======
 // API Route for Real-Unit Slider Metric Ranges
 app.get('/api/metric-ranges', async (req, res) => {
   try {
@@ -214,21 +148,16 @@ app.get('/api/metric-ranges', async (req, res) => {
   }
 });
 
-// retrieval route
->>>>>>> 471806f
+// 6. Filterable Retrieval Route
 app.get('/api/retrieval-data', async (req, res) => {
   try {
     const { 
       startDate, endDate, facilityName, dbId, 
-<<<<<<< HEAD
-      primaryFuel, secondaryFuel, programCode
-=======
       primaryFuel, secondaryFuel, programCode,
       minGrossLoad, maxGrossLoad,
       minCO2, maxCO2,
       minNOx, maxNOx,
       minSO2, maxSO2
->>>>>>> 471806f
     } = req.query;
 
     const facilityWhere = {};
@@ -236,29 +165,11 @@ app.get('/api/retrieval-data', async (req, res) => {
     if (dbId) facilityWhere.epa_facility_id = dbId;
 
     const unitWhere = {};
-<<<<<<< HEAD
-    if (programCode) unitWhere.program_code = programCode;
-
-    const include = [
-      {
-        model: Unit,
-        required: Object.keys(unitWhere).length > 0 || !!(primaryFuel || secondaryFuel),
-        where: Object.keys(unitWhere).length > 0 ? unitWhere : undefined,
-        include: [
-          {
-            model: UnitFuel,
-            required: !!(primaryFuel || secondaryFuel),
-            where: {
-              ...(primaryFuel ? { fuel_type: primaryFuel } : {}),
-              ...(secondaryFuel ? { secondary_fuel_type: secondaryFuel } : {})
-            }
-=======
     if (programCode) unitWhere.unit_type = programCode;
     if (primaryFuel) unitWhere.primary_fuel = primaryFuel;
     if (secondaryFuel) unitWhere.secondary_fuel = secondaryFuel;
 
     const emissionsWhere = {};
-    
     if (startDate || endDate) {
       emissionsWhere.reporting_year = {};
       if (startDate) emissionsWhere.reporting_year[Op.gte] = parseInt(startDate.split('-')[0]);
@@ -267,39 +178,23 @@ app.get('/api/retrieval-data', async (req, res) => {
 
     const minGross = parseFloat(minGrossLoad);
     const maxGross = parseFloat(maxGrossLoad);
-    if (!isNaN(minGross) && minGross > 0) {
-      emissionsWhere.gross_load = { ...(emissionsWhere.gross_load || {}), [Op.gte]: minGross };
-    }
-    if (!isNaN(maxGross)) {
-      emissionsWhere.gross_load = { ...(emissionsWhere.gross_load || {}), [Op.lte]: maxGross };
-    }
+    if (!isNaN(minGross) && minGross > 0) emissionsWhere.gross_load = { ...(emissionsWhere.gross_load || {}), [Op.gte]: minGross };
+    if (!isNaN(maxGross)) emissionsWhere.gross_load = { ...(emissionsWhere.gross_load || {}), [Op.lte]: maxGross };
 
     const minC = parseFloat(minCO2);
     const maxC = parseFloat(maxCO2);
-    if (!isNaN(minC) && minC > 0) {
-      emissionsWhere.co2_mass = { ...(emissionsWhere.co2_mass || {}), [Op.gte]: minC };
-    }
-    if (!isNaN(maxC)) {
-      emissionsWhere.co2_mass = { ...(emissionsWhere.co2_mass || {}), [Op.lte]: maxC };
-    }
+    if (!isNaN(minC) && minC > 0) emissionsWhere.co2_mass = { ...(emissionsWhere.co2_mass || {}), [Op.gte]: minC };
+    if (!isNaN(maxC)) emissionsWhere.co2_mass = { ...(emissionsWhere.co2_mass || {}), [Op.lte]: maxC };
 
     const minN = parseFloat(minNOx);
     const maxN = parseFloat(maxNOx);
-    if (!isNaN(minN) && minN > 0) {
-      emissionsWhere.nox_mass = { ...(emissionsWhere.nox_mass || {}), [Op.gte]: minN };
-    }
-    if (!isNaN(maxN)) {
-      emissionsWhere.nox_mass = { ...(emissionsWhere.nox_mass || {}), [Op.lte]: maxN };
-    }
+    if (!isNaN(minN) && minN > 0) emissionsWhere.nox_mass = { ...(emissionsWhere.nox_mass || {}), [Op.gte]: minN };
+    if (!isNaN(maxN)) emissionsWhere.nox_mass = { ...(emissionsWhere.nox_mass || {}), [Op.lte]: maxN };
 
     const minS = parseFloat(minSO2);
     const maxS = parseFloat(maxSO2);
-    if (!isNaN(minS) && minS > 0) {
-      emissionsWhere.so2_mass = { ...(emissionsWhere.so2_mass || {}), [Op.gte]: minS };
-    }
-    if (!isNaN(maxS)) {
-      emissionsWhere.so2_mass = { ...(emissionsWhere.so2_mass || {}), [Op.lte]: maxS };
-    }
+    if (!isNaN(minS) && minS > 0) emissionsWhere.so2_mass = { ...(emissionsWhere.so2_mass || {}), [Op.gte]: minS };
+    if (!isNaN(maxS)) emissionsWhere.so2_mass = { ...(emissionsWhere.so2_mass || {}), [Op.lte]: maxS };
 
     const hasEmissionFilter = Object.keys(emissionsWhere).length > 0;
     const hasUnitFilter = Object.keys(unitWhere).length > 0;
@@ -314,7 +209,6 @@ app.get('/api/retrieval-data', async (req, res) => {
             model: AnnualRecord,
             required: true, 
             where: hasEmissionFilter ? emissionsWhere : undefined
->>>>>>> 471806f
           }
         ]
       }
@@ -322,22 +216,7 @@ app.get('/api/retrieval-data', async (req, res) => {
 
     const facilities = await Facility.findAll({
       where: facilityWhere,
-<<<<<<< HEAD
-      include: (Object.keys(unitWhere).length > 0 || primaryFuel || secondaryFuel) ? include : [],
-      limit: 200
-    });
-
-    const formattedData = facilities.map(fac => ({
-      id: fac.epa_facility_id,
-      name: fac.facility_name,
-      facility: fac.county ? `${fac.county} County (${fac.state})` : fac.state,
-      date: "2026-09-21",
-      status: "active"
-    }));
-
-    res.json(formattedData);
-=======
-      include: includeArr,
+      include: (hasUnitFilter || hasEmissionFilter || primaryFuel || secondaryFuel) ? includeArr : [],
       limit: 250 
     });
 
@@ -363,16 +242,12 @@ app.get('/api/retrieval-data', async (req, res) => {
     });
 
     res.json(flatData);
->>>>>>> 471806f
   } catch (error) {
     console.error("Database query failed:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-<<<<<<< HEAD
-// 7. API Route to Download a Selected Database Table as a CSV
-=======
 // TRACI 2.2 Routes
 const SHORT_TON_TO_KG = 907.18474;
 
@@ -465,8 +340,7 @@ app.get('/api/traci-impacts', async (req, res) => {
   }
 });
 
-// CSV or XLSX download route
->>>>>>> 471806f
+// 7. API Route to Download a Selected Database Table as a CSV
 app.get('/api/download/:tableName', async (req, res) => {
   try {
     const { tableName } = req.params;
@@ -492,18 +366,6 @@ app.get('/api/download/:tableName', async (req, res) => {
       return res.status(404).send('No data found in this table.');
     }
 
-<<<<<<< HEAD
-    const keys = Object.keys(data[0]);
-    let csvHeader = keys.join(',');
-    let csvRows = data.map(row => 
-      keys.map(key => JSON.stringify(row[key] ?? '')).join(',')
-    );
-    const csvContent = [csvHeader, ...csvRows].join('\n');
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.status(200).send(csvContent);
-=======
     if (format === 'xlsx') {
         const worksheet = XLSX.utils.json_to_sheet(data);
         const workbook = XLSX.utils.book_new();
@@ -526,7 +388,6 @@ app.get('/api/download/:tableName', async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         return res.status(200).send(csvContent);
     }
->>>>>>> 471806f
 
   } catch (error) {
     console.error('Download failed:', error);
@@ -534,8 +395,6 @@ app.get('/api/download/:tableName', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-=======
 // dataset download route
 app.get('/api/download/dataset/:id', async (req, res) => {
   try {
@@ -595,12 +454,10 @@ app.get('/api/assisted-search', async (req, res) => {
         const userPrompt = req.query.q;
         if (!userPrompt) return res.status(400).json({ error: "Query is required" });
 
-        // UPDATED: Now using the stable Groq model
         const response = await groq.chat.completions.create({
             messages: [
                 {
                     role: "system",
-                    // UPDATED: Added facility_name to the extraction list
                     content: `You extract filters from power plant data searches. Return ONLY a valid JSON object.
 Use these keys if the data is present in the search:
 - "facility_name" (string, e.g., "Barry")
@@ -625,14 +482,12 @@ If a filter is not mentioned, DO NOT include the key in the JSON.`
         const unitWhere = {};
         const emissionsWhere = {};
 
-        // UPDATED: Map the facility_name filter using SQL 'LIKE' for fuzzy/partial matching
         if (filters.facility_name) {
             facilityWhere.facility_name = { [Op.like]: `%${filters.facility_name}%` };
         }
         if (filters.year) emissionsWhere.reporting_year = filters.year;
         if (filters.state) facilityWhere.state = filters.state;
         
-        // UPDATED: Apply fuzzy matching to fuel as well
         if (filters.fuel) {
             unitWhere.primary_fuel = { [Op.like]: `%${filters.fuel}%` };
         }
@@ -641,7 +496,6 @@ If a filter is not mentioned, DO NOT include the key in the JSON.`
         const hasUnitFilter = Object.keys(unitWhere).length > 0;
         const hasEmissionFilter = Object.keys(emissionsWhere).length > 0;
 
-        // NEW SAFETY CHECK: If the LLM failed to extract any filters, return empty rather than dumping the whole database.
         if (!hasFacilityFilter && !hasUnitFilter && !hasEmissionFilter) {
              return res.json([]); 
         }
@@ -727,40 +581,21 @@ app.post('/api/upload-csv', upload.single('csvfile'), async (req, res) => {
     if (originalName.endsWith('.xlsx') || originalName.endsWith('.xls')) {
       const workbook = XLSX.readFile(filePath);
 
-      // Detect official EPA TRACI 2.2 workbook by checking for the 'Substances' sheet
       if (workbook.SheetNames.includes('Substances')) {
         const sheet = workbook.Sheets['Substances'];
         const rows = XLSX.utils.sheet_to_json(sheet);
 
-        // Exact uppercase Substance Names from traci_2_2.xlsx
         const targetPollutants = {
           'CARBON DIOXIDE': 'CO2',
           'SULFUR DIOXIDE': 'SO2',
           'NITROGEN OXIDES': 'NOx'
         };
 
-        // Exact column header strings from traci_2_2.xlsx
         const airCategories = [
-          {
-            col: 'Global Climate Air (kg CO2 eq / kg substance)',
-            name: 'Global Warming',
-            unit: 'kg CO2 eq / kg substance'
-          },
-          {
-            col: 'Acidification Air (kg SO2 eq / kg substance)',
-            name: 'Acidification',
-            unit: 'kg SO2 eq / kg substance'
-          },
-          {
-            col: 'HH Particulate Air (PM2.5 eq / kg substance)',
-            name: 'Human Health Particulate',
-            unit: 'PM2.5 eq / kg substance'
-          },
-          {
-            col: 'Photochemical Oxidation Formation Air (kg O3 eq / kg substance)',
-            name: 'Smog Formation',
-            unit: 'kg O3 eq / kg substance'
-          }
+          { col: 'Global Climate Air (kg CO2 eq / kg substance)', name: 'Global Warming', unit: 'kg CO2 eq / kg substance' },
+          { col: 'Acidification Air (kg SO2 eq / kg substance)', name: 'Acidification', unit: 'kg SO2 eq / kg substance' },
+          { col: 'HH Particulate Air (PM2.5 eq / kg substance)', name: 'Human Health Particulate', unit: 'PM2.5 eq / kg substance' },
+          { col: 'Photochemical Oxidation Formation Air (kg O3 eq / kg substance)', name: 'Smog Formation', unit: 'kg O3 eq / kg substance' }
         ];
 
         const factorsToInsert = [];
@@ -825,7 +660,6 @@ app.post('/api/upload-csv', upload.single('csvfile'), async (req, res) => {
     for (let i = 1; i < lines.length; i++) {
       const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/"/g, '').trim());
       
-      // Validation Check 1: Minimum column length
       if (row.length < 24) {
         skippedRows++;
         continue; 
@@ -837,7 +671,6 @@ app.post('/api/upload-csv', upload.single('csvfile'), async (req, res) => {
       const unitId = row[3];
       const year = parseInt(row[5]);
       
-      // Validation Check 2: Require valid identifiers
       if (isNaN(facId) || isNaN(year)) {
         skippedRows++;
         continue;
@@ -895,9 +728,6 @@ app.post('/api/upload-csv', upload.single('csvfile'), async (req, res) => {
       finalRecords.push(record);
     }
 
-    // ==========================================
-    // Duplicate Checking & Handling
-    // ==========================================
     let duplicateCount = 0;
     
     const existingRecords = await AnnualRecord.findAll({
@@ -957,7 +787,6 @@ app.post('/api/upload-csv', upload.single('csvfile'), async (req, res) => {
   }
 });
 
->>>>>>> 471806f
 // 8. Start server and verify database connection
 async function startServer() {
   try {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Explore</title>
+    <title>Analyze</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
     <!-- Plotly.js replaces Chart.js per project rubric recommendations for interactivity and image export -->
@@ -26,7 +26,7 @@
     <table class="nav_bar">
         <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
         <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
-        <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
+        <td class="nav_cell"><a href="analyze_data.html">Analyze Data</a></td>
         <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
         <td class="nav_cell"><a href="download.html">Download Data</a></td>
         <td class="nav_cell"><a href="facility.html">Facility</a></td>
@@ -83,8 +83,18 @@
                 <label for="baseFacility"><b>Baseline Facility:</b></label>
                 <select id="baseFacility" onchange="renderDashboard()" style="margin-right: 15px;"></select>
 
-                <label for="loadChange"><b>Gross Load % Change:</b></label>
-                <input type="number" id="loadChange" value="10" step="5" onchange="renderDashboard()" style="width: 70px;">
+                <label for="loadChangeSlider"><b>Gross Load % Change:</b></label>
+
+                <!-- Slider input with CSS overrides and performance fixes -->
+                <input type="range" id="loadChangeSlider" min="-50" max="50" value="10" step="5" 
+                    oninput="document.getElementById('loadChange').value = this.value;" 
+                    onchange="renderDashboard()"
+                    style="position: relative; pointer-events: auto; width: 150px; vertical-align: middle; margin-right: 10px;">
+
+                <!-- Number input -->
+                <input type="number" id="loadChange" value="10" min="-50" max="50" step="5" 
+                    oninput="document.getElementById('loadChangeSlider').value = this.value; renderDashboard();" 
+                    style="width: 70px; vertical-align: middle;">
                 
                 <p id="rangeWarning" style="color: #dc3545; font-size: 0.9em; display: none; margin-top: 10px; font-weight: bold;">
                     Warning: The selected percentage change extends beyond typical operational variances and may fall outside standard training-data bounds.
