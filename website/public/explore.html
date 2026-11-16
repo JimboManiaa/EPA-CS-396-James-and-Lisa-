@@ -281,7 +281,16 @@
             myChart.destroy();
         }
 
-        const records = currentDataset.records;
+        // Map the Sequelize response to flatten the nested Unit and Facility data
+        const records = currentDataset.records.map(rec => ({
+            ...rec,
+            facility: rec.Unit?.Facility?.facility_name || 'Unknown',
+            state: rec.Unit?.Facility?.state || 'Unknown',
+            epa_unit_id: rec.Unit?.epa_unit_id || 'Unknown',
+            primary_fuel: rec.Unit?.primary_fuel || 'Unknown'
+        }));
+
+        if (records.length === 0) return;
 
         // Chart Types
         switch (currentChartType) {
@@ -305,7 +314,6 @@
                 break;
         }
     }
-
     // Render line chart functionality -------------------------------
     function renderLineChart(records) {
         const ctx = document.getElementById('datasetChart').getContext('2d');
