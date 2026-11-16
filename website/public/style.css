@@ -5,17 +5,15 @@ body {
     background-size: cover;
     margin: 0;
     padding: 0;
-    transform: scale(0.9);
-    transform-origin: 0 0;
-    width: 111.11%;
+    transform: scale(0.7);
+    transform-origin: top center;
+    width: 100%;
 }
 .content {
-    max-width: 1000px;  
     margin: 0 auto;
     background-color: white;
     padding: 20px;
-    width: 1000px;
-    height: 100dvh;
+    width: 97%;
     height: 100%;
     padding-bottom: 50px;
 }
@@ -222,8 +220,6 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
 
 }
 
-
-
 /* Faculty Page CSS ============================*/
 .fac_img {
     width: 250px;
@@ -232,6 +228,62 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
     border-radius: 10px;
     float: left;
     margin-right: 15px;
+}
+
+/* Explorer Page CSS ============================*/
+.vis_content {
+    background-color: white;
+    height: 500px;
+}
+.vis_cell {
+    background-color: #f4f5f5;
+    color: black;
+    border: 2px solid #d3d7d7;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+}
+/* button on hover */ 
+.vis_cell:hover {
+    background-color: rgb(134, 176, 235);
+    color: white;
+}
+.vis_cols1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr; 
+  gap: 10px;
+}
+.scroll_container {
+    background-color: rgb(218, 216, 216);
+    max-width: 1000px;  
+    height: 100px; 
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.scroll_list {
+    padding-left: 10px;
+
+}
+/* Change the style of the active item */
+.scroll_list p.active {
+    background-color: rgb(203, 199, 199)
+}
+.scroll_list p {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    padding-left: 1px;
+}
+.scroll_list p:hover {
+    color: rgb(57, 122, 213);
+}
+
+/* Styling for Chart.js Elements */
+.chart_style {
+    position: relative;
+    height: 350px;
+    border-color: black;
+    border: 3px solid #d3d7d7;
+    border-radius: 5px;
 }
 
 

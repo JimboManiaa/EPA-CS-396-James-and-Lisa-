@@ -5,289 +5,649 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explore</title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2.0.1/dist/chartjs-chart-matrix.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.2.0/build/index.umd.min.js"></script>
 </head>
 <body>
 
     <!-- Styles ALL content -->
     <div class="content">
 
-    <div class="title_container">
-        <!-- Logo -->
-        <img src="logo.png" id="logo">
+        <div class="title_container">
+            <!-- Logo -->
+            <img src="logo.png" id="logo">
 
-        <!-- Title -->
-        <h1 id="site_title">CAMPD Manager</h1>
-    </div>    
+            <!-- Title -->
+            <h1 id="site_title">CAMPD Manager</h1>
+        </div>    
 
-    <!-- The nav bar ------------------------------------------------------>
-    <table class="nav_bar">
-        <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
-        <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
-        <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
-        <td class="nav_cell"><a href="analyze_data.html">Analyze Data</a></td>
-        <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
-        <td class="nav_cell"><a href="download.html">Download Data</a></td>
-        <td class="nav_cell"><a href="facility.html">Facility</a></td>
-    </table>
-
-    <!-- Content begins here -->
-
-    <h2>Explore Environmental Impacts (EPA TRACI 2.2)</h2>
-    <hr>
-
-    <div class="about_content">
-        <p>
-            This module combines reported <b>CAMPD</b> annual emissions (converted from short tons to kilograms: 1 short ton = 907.18474 kg) with <b>EPA TRACI 2.2</b> characterization factors to estimate potential environmental and human-health impacts.
-        </p>
-    </div>
-
-    <div class="info_content">
-        <label class="search_label">Impact Filter</label>
-        <form id="explore-filter-form" onsubmit="return false;">
-            <label for="categoryFilter">Impact Category:</label>
-            <select id="categoryFilter" name="categoryFilter">
-                <option value="">All Impact Categories</option>
-            </select>
-
-            <label for="yearFilter">Reporting Year:</label>
-            <input type="number" id="yearFilter" name="yearFilter" placeholder="e.g. 2024">
-
-            <button type="button" id="applyExploreBtn">Calculate Impacts</button>
-        </form>
-    </div>
-    <hr>
-
-    <h2>TRACI 2.2 Reference Characterization Factors</h2>
-
-    <div class="db_holder">
-        <table class="db_table">
-            <thead>
-                <tr>
-                    <th>TRACI Version</th>
-                    <th>Pollutant</th>
-                    <th>Substance Name</th>
-                    <th>Impact Category</th>
-                    <th>Factor Value</th>
-                    <th>Factor Unit</th>
-                </tr>
-            </thead>
-            <tbody id="factorsBody">
-            </tbody>
+        <!-- The nav bar ------------------------------------------------------>
+        <table class="nav_bar">
+            <tr>
+                <td class="home_cell"><a href="index.html"><img src="home.png" id="nav_home"></a></td>
+                <td class="nav_cell"><a href="retrieval.html">Data Retrieval</a></td>
+                <td class="nav_cell"><a href="explore.html">Explore Data</a></td>
+                <td class="nav_cell"><a href="analyze.html">Analyze Data</a></td>
+                <td class="nav_cell"><a href="upload.html">Upload Data</a></td>
+                <td class="nav_cell"><a href="download.html">Download Data</a></td>
+                <td class="nav_cell"><a href="facility.html">Facility</a></td>
+            </tr>
         </table>
-    </div>
 
-    <hr>
+        <!-- Content begins here -->
 
-    <h2>Calculated Facility & Unit Impact Results</h2>
+        <h2>Explore Data</h2>
+        <hr>
 
-    <div class="info_content">
-        <form role="search" id="search-form" onsubmit="return false;">
-            <label for="site-search">Search impact results:</label>
-            <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
-        </form>
-    </div>
+        <!-- Dataset Selector -->
+        <div class="info_content">
+            <p>Which dataset would you like to explore?</p>
+            <hr>
 
-    <div class="db_holder">
-        <table class="db_table">
-            <thead>
+            <!-- A scrollable table which populates with ALL of the datasets installed -->
+            <div class="scroll_container">
+                <div class="scroll_list" id="scrollBody">
+                    <!-- auto populating list -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualizer =========================================================== -->
+        <div class="info_content">
+            <h3 id="selectedDatasetName">Dataset Name</h3>
+
+            <!-- Chart Content Box -->
+            <div class="vis_content chart_style" id="visContentBox">
+                <canvas id="datasetChart"></canvas>
+            </div>
+
+            <!-- Buttons -->
+            <table class="nav_bar">
                 <tr>
-                    <th>Facility</th>
-                    <th>Unit</th>
-                    <th>Year</th>
-                    <th>Pollutant</th>
-                    <th>Emissions (short tons)</th>
-                    <th>Impact Category</th>
-                    <th>TRACI Factor</th>
-                    <th>Total Impact Score</th>
-                    <th>Impact / Gross Load (per MWh)</th>
+                    <td class="vis_cell active" id="lineChartBtn">Line Chart</td>
+                    <td class="vis_cell" id="barChartBtn">Bar Chart</td>
+                    <td class="vis_cell" id="histogramBtn">Histogram</td>
+                    <td class="vis_cell" id="boxPlotBtn">Box Plot</td>
+                    <td class="vis_cell" id="scatterPlotBtn">Scatter Plot</td>
+                    <td class="vis_cell" id="heatMapBtn">Heat Map</td>
                 </tr>
-            </thead>
-            <tbody id="impactsBody">
-            </tbody>
-        </table>
+            </table>
+
+        </div>
+
+        <!-- Divide the Content Box =========================================================== -->
+        <div class="vis_cols1">
+
+            <!-- State Level Visualizer -->
+            <div class="info_content">
+                <h3>State Level Visualization</h3>
+
+
+                <!--<div class="vis_cols1">
+                     State Level Visualizer 
+                    <div class="info_content">
+                        <h3 id="stateMapTitle">State-Level Emissions & Load Map</h3>
+                        
+                         Filter & Data Export Controls 
+                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+                            <label for="mapMetricSelect"><strong>Metric:</strong></label>
+                            <select id="mapMetricSelect">
+                                <option value="co2_mass">CO2 Emissions (tons)</option>
+                                <option value="gross_load">Gross Load (MWh)</option>
+                                <option value="intensity">CO2 Intensity (tons/MWh)</option>
+                                <option value="so2_mass">SO2 Emissions (tons)</option>
+                                <option value="nox_mass">NOx Emissions (tons)</option>
+                            </select>
+
+                            <button type="button" id="downloadMapCsvBtn">Download Map Data (CSV)</button>
+                        </div>
+
+                         Plotly Map Container (Plotly also includes built-in camera PNG export & zoom) 
+                        <div id="stateMapContainer" style="width: 100%; height: 420px;"></div>
+                    </div> 
+                </div> -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            </div>
+
+            <!-- Rankings -->
+            <div class="info_content">
+                <h3>Data Rankings</h3>
+            </div>
+        </div>
+
+        <!-- Data Comparison Section ============================================================ -->
+        <h2>Compare Data</h2>
+        <hr>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     </div>
 
-    <div id="pagination-controls" style="text-align: center; margin-top: 15px; display: none;">
-        <button id="prevPageBtn" class="btn" style="margin-right: 10px;">Previous</button>
-        <span style="margin: 0 10px;">
-            Page <input type="number" id="pageJumpInput" style="width: 60px; text-align: center;" min="1" value="1"> of <span id="totalPagesIndicator">1</span>
-        </span>
-        <button id="nextPageBtn" class="btn" style="margin-left: 10px;">Next</button>
-    </div>
 
-    </div> 
 
-<script>
-let currentImpactData = [];
-let currentPage = 1;
-const rowsPerPage = 50;
 
-async function loadFactors() {
-    const tbody = document.getElementById('factorsBody');
-    const catSelect = document.getElementById('categoryFilter');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading TRACI 2.2 factors from MySQL...</td></tr>';
 
-    try {
-        const res = await fetch('/api/traci-factors');
-        if (!res.ok) throw new Error('Failed to fetch TRACI factors');
-        const factors = await res.json();
 
-        tbody.innerHTML = '';
-        const categories = new Set();
 
-        if (factors.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No TRACI factors installed yet.</td></tr>';
+
+
+
+
+
+
+
+    <script>
+
+    // JS BEGINS HERE ===============================================================
+    // ==============================================================================
+    
+    let myChart = null;
+    let currentDataset = null;
+    let currentChartType = 'line';
+
+    // Function for the auto populating scroll list ---
+    function renderRows(data) {
+        const tableBody = document.getElementById("scrollBody");
+        tableBody.innerHTML = "";
+        
+        if (!data || data.length === 0) {
+            tableBody.innerHTML = `<p>No matching records found.</p>`;
             return;
         }
 
-        factors.forEach(f => {
-            categories.add(f.impact_category);
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${f.traci_version}</td>
-                <td>${f.pollutant_code}</td>
-                <td>${f.pollutant_name}</td>
-                <td>${f.impact_category}</td>
-                <td>${f.factor_value}</td>
-                <td>${f.factor_unit}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        data.forEach((entry, index) => {
+            const row = document.createElement("p");
+            row.innerHTML = `${entry.name} (${entry.facility})`;
 
-        categories.forEach(cat => {
-            const opt = document.createElement('option');
-            opt.value = cat;
-            opt.textContent = cat;
-            catSelect.appendChild(opt);
-        });
-    } catch (error) {
-        console.error("Error loading TRACI factors:", error);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Error connecting to database backend.</td></tr>';
-    }
-}
+            // Select first item by default
+            if (index === 0) {
+                row.classList.add("active");
+                selectDataset(entry);
+            }
 
-async function loadImpacts() {
-    const category = document.getElementById('categoryFilter').value;
-    const year = document.getElementById('yearFilter').value;
-    const params = new URLSearchParams();
-    if (category) params.append('impactCategory', category);
-    if (year) params.append('year', year);
+            // Make the list item clickable
+            row.addEventListener("click", () => {
+                const allItems = tableBody.querySelectorAll("p");
+                allItems.forEach(item => item.classList.remove("active"));
+                row.classList.add("active");
+                selectDataset(entry);
+            });
 
-    const tbody = document.getElementById('impactsBody');
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Calculating impacts from MySQL...</td></tr>';
-
-    try {
-        const res = await fetch(`/api/traci-impacts?${params.toString()}`);
-        if (!res.ok) throw new Error('Failed to fetch impact calculations');
-        currentImpactData = await res.json();
-
-        if (currentImpactData.length === 0) {
-            document.getElementById('pagination-controls').style.display = 'none';
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center">No matching records found.</td></tr>';
-            return;
-        }
-
-        currentPage = 1;
-        renderPaginatedImpacts();
-    } catch (error) {
-        console.error("Error loading impacts:", error);
-        tbody.innerHTML = '<tr><td colspan="9" class="text-danger text-center">Error connecting to database backend.</td></tr>';
-    }
-}
-
-function renderPaginatedImpacts() {
-    const tbody = document.getElementById('impactsBody');
-    const searchInput = document.getElementById('site-search');
-    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
-
-    let filtered = [...currentImpactData];
-    if (query) {
-        const terms = query.split(/\s+/).filter(Boolean);
-        filtered = filtered.filter(row => {
-            const rowText = Object.values(row)
-                .filter(val => val !== null && val !== undefined)
-                .map(val => String(val).toLowerCase())
-                .join(' ');
-            return terms.every(term => rowText.includes(term));
+            tableBody.appendChild(row);
         });
     }
 
-    const totalPages = Math.ceil(filtered.length / rowsPerPage) || 1;
-    if (currentPage > totalPages) currentPage = totalPages;
-
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const pageRows = filtered.slice(startIndex, startIndex + rowsPerPage);
-
-    tbody.innerHTML = '';
-    if (pageRows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No matching records found.</td></tr>';
-        document.getElementById('pagination-controls').style.display = 'none';
-        return;
+    // Unclick inactive datasets from list
+    function setActiveChartButton(activeBtnId) {
+        const buttons = document.querySelectorAll(".vis_cell");
+        buttons.forEach(btn => btn.classList.remove("active"));
+        const activeBtn = document.getElementById(activeBtnId);
+        if (activeBtn) activeBtn.classList.add("active");
     }
 
-    pageRows.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><a href="facility.html?id=${row.epa_facility_id}" style="color: #007bff; text-decoration: underline;">${row.facility_name}</a> (${row.state})</td>
-            <td>${row.unit_id}</td>
-            <td>${row.reporting_year}</td>
-            <td>${row.pollutant}</td>
-            <td>${Number(row.reported_tons).toLocaleString()}</td>
-            <td>${row.impact_category}</td>
-            <td>${row.factor_value} ${row.factor_unit} (v${row.traci_version})</td>
-            <td><b>${Number(row.impact_score).toLocaleString()}</b> ${row.impact_unit}</td>
-            <td>${row.intensity_per_mwh !== 'N/A' ? Number(row.intensity_per_mwh).toLocaleString() + ' ' + row.impact_unit + '/MWh' : 'N/A'}</td>
-        `;
-        tbody.appendChild(tr);
+    // Fetch datasets and bind chart buttons on page load
+    document.addEventListener("DOMContentLoaded", () => {
+        const chartButtons = [
+            { id: 'lineChartBtn', type: 'line' },
+            { id: 'barChartBtn', type: 'bar' },
+            { id: 'histogramBtn', type: 'histogram' },
+            { id: 'boxPlotBtn', type: 'boxplot' },
+            { id: 'scatterPlotBtn', type: 'scatter' },
+            { id: 'heatMapBtn', type: 'heatmap' }
+        ];
+
+        chartButtons.forEach(({ id, type }) => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    currentChartType = type;
+                    setActiveChartButton(id);
+                    renderCurrentChart();
+                });
+            }
+        });
+
+        fetch('/api/datasets')
+            .then(response => response.json())
+            .then(data => {
+                renderRows(data);
+            })
+            .catch(error => {
+                console.error("Error loading datasets:", error);
+                const tableBody = document.getElementById("scrollBody");
+                tableBody.innerHTML = `<p>Failed to load datasets.</p>`;
+            });
     });
 
-    document.getElementById('pagination-controls').style.display = 'block';
-    document.getElementById('pageJumpInput').max = totalPages;
-    document.getElementById('pageJumpInput').value = currentPage;
-    document.getElementById('totalPagesIndicator').textContent = totalPages;
-    document.getElementById('prevPageBtn').disabled = currentPage === 1;
-    document.getElementById('nextPageBtn').disabled = currentPage === totalPages;
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadFactors();
-    await loadImpacts();
-
-    document.getElementById('applyExploreBtn').addEventListener('click', loadImpacts);
-    document.getElementById('categoryFilter').addEventListener('change', loadImpacts);
-
-    const searchInput = document.getElementById('site-search');
-    searchInput.addEventListener('input', () => {
-        currentPage = 1;
-        renderPaginatedImpacts();
-    });
-
-    document.getElementById('prevPageBtn').addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            renderPaginatedImpacts();
+    // Select dataset function --------------
+    async function selectDataset(dataset) {
+        // Change name on-load
+        const titleElement = document.getElementById("selectedDatasetName");
+        if (titleElement) {
+            titleElement.textContent = dataset.name + " Dataset";
         }
-    });
 
-    document.getElementById('nextPageBtn').addEventListener('click', () => {
-        const maxPage = parseInt(document.getElementById('pageJumpInput').max, 10) || 1;
-        if (currentPage < maxPage) {
-            currentPage++;
-            renderPaginatedImpacts();
+        try {
+            const response = await fetch(`/api/datasets/${dataset.id}`);
+            if (!response.ok) throw new Error('Failed to fetch dataset records');
+            
+            currentDataset = await response.json();
+            renderCurrentChart();
+        } catch (error) {
+            console.error("Error loading dataset records for chart:", error);
         }
-    });
+    }
 
-    document.getElementById('pageJumpInput').addEventListener('change', (e) => {
-        let targetPage = parseInt(e.target.value, 10);
-        let maxPage = parseInt(e.target.max, 10) || 1;
-        if (isNaN(targetPage) || targetPage < 1) targetPage = 1;
-        else if (targetPage > maxPage) targetPage = maxPage;
-        currentPage = targetPage;
-        renderPaginatedImpacts();
-    });
-});
-</script>
+    // Function to render the charts with my.chart ---------------
+    function renderCurrentChart() {
+        if (!currentDataset || !currentDataset.records) return;
 
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        const records = currentDataset.records;
+
+        // Chart Types
+        switch (currentChartType) {
+            case 'line':
+                renderLineChart(records);
+                break;
+            case 'bar':
+                renderBarChart(records);
+                break;
+            case 'histogram':
+                renderHistogram(records);
+                break;
+            case 'boxplot':
+                renderBoxPlot(records);
+                break;
+            case 'scatter':
+                renderScatterPlot(records);
+                break;
+            case 'heatmap':
+                renderHeatMap(records);
+                break;
+        }
+    }
+
+    // Render line chart functionality -------------------------------
+    function renderLineChart(records) {
+        const ctx = document.getElementById('datasetChart').getContext('2d');
+
+        const labels = records.map(r => r.reporting_year);
+        const emissionsData = records.map(r => Number(r.co2_mass) || 0);
+        const grossLoadData = records.map(r => Number(r.gross_load) || 0);
+
+        // Calculate CO2 intensity
+        const intensityData = records.map( r => {
+            const co2 = Number(r.co2_mass) || 0;
+            const load = Number(r.gross_load) || 0;
+            return load > 0 ? Number((co2 / load).toFixed(4)) : null;
+
+
+
+
+        });
+
+
+
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        // red lines
+                        label: 'CO2 Emissions (tons)',
+                        data: emissionsData,
+                        borderColor: '#989898',
+                        backgroundColor: '#989898',
+                        yAxisID: 'y',
+                        tension: 0.1
+                    },
+                    {
+                        // blue lines
+                        label: 'Gross Load (MWh)',
+                        data: grossLoadData,
+                        borderColor: '#005FA3',
+                        backgroundColor: '#005FA3',
+                        yAxisID: 'y1',
+                        tension: 0.1
+                    },
+                    {
+                        label: "CO2 Intensity (tons/MWh)",
+                        data: intensityData,
+                        borderColor: '#97D3EA',
+                        backgroundColor: '#97D3EA',
+                        yAxisID: 'y2',
+                        tension: 0.1,
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'CO2 Emissions (tons)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: 'Gross Load (MWh)' },
+                        grid: { drawOnChartArea: false }
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {display: true, text: 'IIntensity (tons/MWh)'},
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Render bar chart functionality -------------------------------
+
+    // can compare states, fuels, facilities, units, or control technologies
+
+
+    function renderBarChart(records) {
+        const ctx = document.getElementById('datasetChart').getContext('2d');
+        const groupFields = ['state', 'primary_fuel', 'facility', 'epa_unit_id'];
+        const activeGroupField = groupFields.find(field => records.some(r => r[field] !== undefined && r[field] !== null)) || 'reporting_year';
+
+        const aggregatedData = {};
+        records.forEach(r => {
+            const key = r[activeGroupField] || 'Unknown';
+            aggregatedData[key] = (aggregatedData[key] || 0) + (Number(r.co2_mass) || 0);
+        });
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(aggregatedData),
+                datasets: [{
+                    label: `Total CO2 Emissions by ${activeGroupField.replace('_', ' ').toUpperCase()}`,
+                    data: Object.values(aggregatedData),
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgb(54, 162, 235)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Total CO2 Mass (tons)' }
+                    }
+                }
+            }
+        });
+    }
+
+
+
+
+
+    // 3. Histogram (Distribution of CO2 Emissions)
+    function renderHistogram(records) {
+        const ctx = document.getElementById('datasetChart').getContext('2d');
+        const values = records.map(r => Number(r.co2_mass)).filter(v => !isNaN(v) && v > 0);
+
+        if (values.length === 0) return;
+
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const binCount = Math.min(10, Math.max(1, Math.ceil(Math.sqrt(values.length))));
+        const binSize = (max - min) / binCount || 1;
+
+        const bins = Array(binCount).fill(0);
+        const labels = Array(binCount).fill('');
+
+        values.forEach(val => {
+            let index = Math.floor((val - min) / binSize);
+            if (index >= binCount) index = binCount - 1;
+            bins[index]++;
+        });
+
+        for (let i = 0; i < binCount; i++) {
+            const start = (min + i * binSize).toFixed(0);
+            const end = (min + (i + 1) * binSize).toFixed(0);
+            labels[i] = `${start} - ${end}`;
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'CO2 Emissions Distribution (Frequency)',
+                    data: bins,
+                    backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                    borderColor: 'rgb(255, 159, 64)',
+                    borderWidth: 1,
+                    barPercentage: 1,
+                    categoryPercentage: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: 'CO2 Mass Range (tons)' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Record Count' } }
+                }
+            }
+        });
+    }
+
+    // 4. Box Plot (Distributions across key metrics)
+    function renderBoxPlot(records) {
+        const ctx = document.getElementById('datasetChart').getContext('2d');
+        const co2Values = records.map(r => Number(r.co2_mass)).filter(v => !isNaN(v));
+        const loadValues = records.map(r => Number(r.gross_load)).filter(v => !isNaN(v));
+
+        myChart = new Chart(ctx, {
+            type: 'boxplot',
+            data: {
+                labels: ['CO2 Mass (tons)', 'Gross Load (MWh)'],
+                datasets: [{
+                    label: 'Metric Distribution',
+                    backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                    borderColor: 'rgb(153, 102, 255)',
+                    borderWidth: 1,
+                    outlierColor: '#999999',
+                    padding: 10,
+                    itemRadius: 2,
+                    data: [co2Values, loadValues]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // 5. Scatter Plot (Gross Load vs CO2 Emissions)
+    function renderScatterPlot(records) {
+        const ctx = document.getElementById('datasetChart').getContext('2d');
+        const scatterData = records
+            .map(r => ({
+                x: Number(r.gross_load),
+                y: Number(r.co2_mass)
+            }))
+            .filter(pt => !isNaN(pt.x) && !isNaN(pt.y));
+
+        myChart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Gross Load vs CO2 Emissions',
+                    data: scatterData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgb(75, 192, 192)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: 'Gross Load (MWh)' } },
+                    y: { title: { display: true, text: 'CO2 Emissions (tons)' } }
+                }
+            }
+        });
+    }
+
+    // Pearson Correlation Helper for Heat Map
+    function calculatePearsonCorrelation(xArr, yArr) {
+        const n = xArr.length;
+        if (n === 0) return 0;
+
+        const meanX = xArr.reduce((a, b) => a + b, 0) / n;
+        const meanY = yArr.reduce((a, b) => a + b, 0) / n;
+
+        let num = 0, denX = 0, denY = 0;
+        for (let i = 0; i < n; i++) {
+            const dx = xArr[i] - meanX;
+            const dy = yArr[i] - meanY;
+            num += dx * dy;
+            denX += dx * dx;
+            denY += dy * dy;
+        }
+
+        const denominator = Math.sqrt(denX * denY);
+        return denominator === 0 ? 0 : num / denominator;
+    }
+
+    // 6. Correlation Heat Map
+    function renderHeatMap(records) {
+        const ctx = document.getElementById('datasetChart').getContext('2d');
+        const candidateFields = ['co2_mass', 'gross_load', 'heat_input', 'so2_mass', 'nox_mass'];
+        const activeFields = candidateFields.filter(field => 
+            records.some(r => r[field] !== undefined && !isNaN(Number(r[field])))
+        );
+
+        const matrixData = [];
+
+        for (let i = 0; i < activeFields.length; i++) {
+            for (let j = 0; j < activeFields.length; j++) {
+                const fieldX = activeFields[i];
+                const fieldY = activeFields[j];
+
+                const validPairs = records
+                    .map(r => [Number(r[fieldX]), Number(r[fieldY])])
+                    .filter(([x, y]) => !isNaN(x) && !isNaN(y));
+
+                const xVals = validPairs.map(p => p[0]);
+                const yVals = validPairs.map(p => p[1]);
+                const corr = i === j ? 1 : calculatePearsonCorrelation(xVals, yVals);
+
+                matrixData.push({
+                    x: fieldX,
+                    y: fieldY,
+                    v: corr
+                });
+            }
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'matrix',
+            data: {
+                datasets: [{
+                    label: 'Pearson Correlation Matrix',
+                    data: matrixData,
+                    backgroundColor(context) {
+                        const raw = context.dataset.data[context.dataIndex];
+                        if (!raw) return 'rgba(0,0,0,0.1)';
+                        const alpha = Math.max(0.15, Math.abs(raw.v));
+                        return raw.v >= 0 
+                            ? `rgba(54, 162, 235, ${alpha})` 
+                            : `rgba(255, 99, 132, ${alpha})`;
+                    },
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 1,
+                    width: ({ chart }) => (chart.chartArea || {}).width / activeFields.length - 2,
+                    height: ({ chart }) => (chart.chartArea || {}).height / activeFields.length - 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: () => '',
+                            label: (ctx) => `${ctx.raw.x} vs ${ctx.raw.y}: r = ${ctx.raw.v.toFixed(3)}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'category',
+                        labels: activeFields,
+                        ticks: { display: true },
+                        grid: { display: false }
+                    },
+                    y: {
+                        type: 'category',
+                        labels: activeFields,
+                        offset: true,
+                        ticks: { display: true },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+    </script>
 </body>
 </html>
