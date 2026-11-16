@@ -797,7 +797,48 @@ app.post('/api/upload-csv', upload.single('csvfile'), async (req, res) => {
     res.status(500).json({ error: "Failed to process uploaded file." });
   }
 });
+// API Route for Dynamic Model Evaluation (Using Groq)
+app.get('/api/evaluate-model', async (req, res) => {
+    try {
+        // Extract all dashboard selections
+        const { facility, loadChange, impactCategory, year } = req.query;
+        
+        // Structure the specific context and enforce HTML layout
+        const dynamicContext = `\n\nSpecific Scenario Context:
+        - Facility: ${facility || 'Unknown'}
+        - Simulated Load Change: ${loadChange || 0}%
+        - TRACI Impact Category: ${impactCategory || 'All Categories'}
+        - Reporting Year: ${year || 'All Years'}
+        
+        Structure your HTML response EXACTLY as follows:
+        1. An <h3> titled "Executive Summary: Scenario Recommendation" at the VERY TOP. Provide a specific recommendation for this exact facility, load change, impact category, and year. Explicitly state which model (Linear or Tree) is more trustworthy for this specific context and why.
+        2. An <h3> titled "General Model Evaluation & Metrics".
+        3. Algorithmic assumptions, strengths, and weaknesses for both the Linear Regression and Decision Tree models.
+        4. A simulated chronological data split (e.g., Train: 2020-2022, Validate: 2023, Test: 2024).
+        5. Simulated regression metrics (MAE, RMSE, R-squared) for both models.
+        6. A final <h4> section titled "Conclusion" summarizing the overall evaluation and recommendation for this specific scenario.`;
 
+        const response = await groq.chat.completions.create({
+            messages: [
+                {
+                    role: "system",
+                    content: `You are an expert data scientist evaluating prediction models for a power plant emissions dashboard according to academic rubric standards. 
+                    Format your response in clean HTML using only <h3>, <h4>, <ul>, <li>, <p>, and <b> tags. Do not use markdown backticks or blockquotes.`
+                },
+                {
+                    role: "user",
+                    content: `Provide an evaluation comparing a Linear Regression Model vs a Decision Tree Regressor for predicting power plant emissions based on gross load.${dynamicContext}`
+                }
+            ],
+            model: "openai/gpt-oss-120b"
+        });
+
+        res.json({ evaluation: response.choices[0].message.content });
+    } catch (error) {
+        console.error("Model evaluation failed:", error);
+        res.status(500).json({ error: "Failed to generate evaluation" });
+    }
+});
 // 8. Start server and verify database connection
 async function startServer() {
   try {

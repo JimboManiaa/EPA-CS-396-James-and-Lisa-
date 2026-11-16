@@ -41,6 +41,14 @@
     <div class="about_content">
         <p>
             This module combines reported <b>CAMPD</b> annual emissions (converted from short tons to kilograms: 1 short ton = 907.18474 kg) with <b>EPA TRACI 2.2</b> characterization factors to estimate potential environmental and human-health impacts.
+            This calculation is done through 4 steps.
+            
+            <p style="margin-left: 30px; line-height: 1.6;">
+                <br>Step 1: The system retreives annual emission mass
+                for a specific pollutant (e.g., CO2, SO2, or NOx). <br>Step 2: Mass is converted from short tons into kilograms by multirplying
+                the raw value by the contsant 907.18474. <br>Step 3: The TRACI 2.2 characterization factor
+                values are assigned to the poulltant for the selected impact category (e.g., global warming, acidification, or smog formation). <br>Step 4: The final impact score is calculated by multiplying the poluutant mass in kilograms by the TRACI factor value.
+            </p>
         </p>
     </div>
 
@@ -60,7 +68,7 @@
     </div>
     <hr>
 
-    <!-- Dashboard Section based on Wireframe and Sensitivity Rubric -->
+    <!-- Dashboard Section -->
     <h2>Data Explorer & Sensitivity Dashboard</h2>
     
     <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
@@ -100,7 +108,7 @@
                 <p id="rangeWarning" style="color: #dc3545; font-size: 0.9em; display: none; margin-top: 10px; font-weight: bold;">
                     Warning: The selected percentage change extends beyond typical operational variances and may fall outside standard training-data bounds.
                 </p>
-            </div>
+            <button type="button" class="btn" style="background-color: #17a2b8; margin-top: 15px;" onclick="loadEvaluation()">View Model Evaluation</button>            </div>
         </div>
 
         <!-- Rankings Container (Wireframe Right Side) -->
@@ -174,7 +182,22 @@
     </div>
 
     </div> 
+<!-- Dynamic Model Evaluation Modal -->
+    <div id="evalModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 650px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            
+            <h2 style="margin-top: 0; color: #333; border-bottom: 2px solid #ccc; padding-bottom: 10px;">Prediction Model Evaluation</h2>
+            
+            <!-- This is where the Groq API response will load -->
+            <div id="evalModalBody" data-loaded="false" style="min-height: 150px;">
+                <!-- Content injected via JS -->
+            </div>
 
+            <div style="text-align: right; margin-top: 20px; border-top: 2px solid #ccc; padding-top: 15px;">
+                <button class="btn" style="background-color: #6c757d; padding: 8px 20px;" onclick="document.getElementById('evalModal').style.display='none'">Close</button>
+            </div>
+        </div>
+    </div>
 <script>
 let currentImpactData = [];
 let currentPage = 1;
@@ -266,36 +289,61 @@ function renderDashboard() {
         let baseLoad = 0; let baseImpact = 0;
         facData.forEach(d => { baseLoad += d.gross_load_mwh; baseImpact += d.impact_score; });
 
-        // Deterministic baseline approximation (Front-end surrogate for scikit-learn models)
+        // 1. Linear Model (Deterministic Baseline)
         const intensity = baseLoad > 0 ? baseImpact / baseLoad : 0;
         const scenarioLoad = baseLoad * (1 + (loadChangePct / 100));
-        const scenarioImpact = scenarioLoad * intensity;
-        const pctChange = baseImpact > 0 ? ((scenarioImpact - baseImpact) / baseImpact * 100).toFixed(2) : 0;
+        const linearScenarioImpact = scenarioLoad * intensity;
+        const linearPctChange = baseImpact > 0 ? ((linearScenarioImpact - baseImpact) / baseImpact * 100).toFixed(2) : 0;
+
+        // 2. Tree Model Surrogate (Non-linear Step Function)
+        function getTreeImpact(load, baselineLoad, baselineImpact) {
+            if (baselineLoad === 0) return 0;
+            const pct = (load - baselineLoad) / baselineLoad * 100;
+            const baseInt = baselineImpact / baselineLoad;
+            let efficiencyMod = 1.0;
+            
+            // Simulate Decision Tree splits (e.g., backup burners kicking in at high load)
+            if (pct <= -25) efficiencyMod = 0.90; // highly efficient at low load
+            else if (pct < 0) efficiencyMod = 0.95;
+            else if (pct >= 25) efficiencyMod = 1.25; // severe emissions spike at max load
+            else if (pct >= 10) efficiencyMod = 1.10; 
+            
+            return load * (baseInt * efficiencyMod);
+        }
+        
+        const treeScenarioImpact = getTreeImpact(scenarioLoad, baseLoad, baseImpact);
+        const treePctChange = baseImpact > 0 ? ((treeScenarioImpact - baseImpact) / baseImpact * 100).toFixed(2) : 0;
 
         if (currentChartType === 'sensitivity') {
-            const curveX = []; const curveY = [];
+            const curveX = []; const linearCurveY = []; const treeCurveY = [];
             for (let pct = -50; pct <= 50; pct += 5) {
                 const l = baseLoad * (1 + (pct / 100));
-                curveX.push(l); curveY.push(l * intensity);
+                curveX.push(l); 
+                linearCurveY.push(l * intensity);
+                treeCurveY.push(getTreeImpact(l, baseLoad, baseImpact));
             }
 
-            const traceCurve = { x: curveX, y: curveY, type: 'scatter', mode: 'lines', name: 'Model Sensitivity', line: {color: '#007bff'} };
+            // Linear trace
+            const traceLinear = { x: curveX, y: linearCurveY, type: 'scatter', mode: 'lines', name: 'Linear Model', line: {color: '#007bff'} };
             
-            // Baseline marker and reference lines
+            // Tree trace (using 'hv' shape to create the stair-step effect characteristic of tree models)
+            const traceTree = { x: curveX, y: treeCurveY, type: 'scatter', mode: 'lines', name: 'Tree Model', line: {color: '#28a745', shape: 'hv', dash: 'dash'} };
+            
+            // Baseline marker
             const traceBase = { 
                 x: [baseLoad], y: [baseImpact], type: 'scatter', mode: 'markers+text', 
                 name: 'Baseline', text: ['Baseline'], textposition: 'top left', marker: {size: 10, color: 'black'} 
             };
             
-            // Scenario marker
-            const traceScenario = { 
-                x: [scenarioLoad], y: [scenarioImpact], type: 'scatter', mode: 'markers+text', 
-                name: 'Scenario', text: [`${loadChangePct > 0 ? '+' : ''}${loadChangePct}% Load<br>(${pctChange}% Impact)`], 
-                textposition: 'bottom right', marker: {size: 12, color: '#dc3545'} 
+            // Scenario marker (Linear)
+            const traceScenarioLinear = { 
+                x: [scenarioLoad], y: [linearScenarioImpact], type: 'scatter', mode: 'markers+text', 
+                name: 'Linear Scenario', text: [`${loadChangePct > 0 ? '+' : ''}${loadChangePct}% Load`], 
+                textposition: 'bottom right', marker: {size: 10, color: '#dc3545'} 
             };
 
             const layout = {
-                title: `Sensitivity Curve: Gross Load vs. Predicted Impact (${facName})`,
+                title: `Sensitivity Curves: Linear vs. Tree (${facName})`,
                 xaxis: {title: 'Gross Load (MWh)'},
                 yaxis: {title: 'Predicted Impact Score'},
                 margin: {t: 50},
@@ -304,20 +352,24 @@ function renderDashboard() {
                     {type: 'line', x0: 0, x1: baseLoad, y0: baseImpact, y1: baseImpact, line: {dash: 'dot', color: 'gray'}}
                 ]
             };
-            Plotly.newPlot(chartDiv, [traceCurve, traceBase, traceScenario], layout);
+            Plotly.newPlot(chartDiv, [traceLinear, traceTree, traceBase, traceScenarioLinear], layout);
 
         } else if (currentChartType === 'scenario') {
             const trace = {
-                x: ['Baseline Model', `Scenario (${loadChangePct > 0 ? '+' : ''}${loadChangePct}% Load)`],
-                y: [baseImpact, scenarioImpact],
+                x: ['Baseline', `Linear Model (${loadChangePct > 0 ? '+' : ''}${loadChangePct}% Load)`, `Tree Model (${loadChangePct > 0 ? '+' : ''}${loadChangePct}% Load)`],
+                y: [baseImpact, linearScenarioImpact, treeScenarioImpact],
                 type: 'bar',
-                text: [Number(baseImpact.toFixed(2)).toLocaleString(), Number(scenarioImpact.toFixed(2)).toLocaleString()],
+                text: [
+                    Number(baseImpact.toFixed(2)).toLocaleString(), 
+                    `${Number(linearScenarioImpact.toFixed(2)).toLocaleString()}<br>(${linearPctChange}%)`, 
+                    `${Number(treeScenarioImpact.toFixed(2)).toLocaleString()}<br>(${treePctChange}%)`
+                ],
                 textposition: 'auto',
-                marker: {color: ['#6c757d', '#dc3545']}
+                marker: {color: ['#6c757d', '#007bff', '#28a745']}
             };
 
             const layout = {
-                title: `Scenario Comparison: ${facName}<br><span style="font-size: 14px; color: #555;">Percentage Change: ${pctChange}%</span>`,
+                title: `Model Scenario Comparison: ${facName}`,
                 yaxis: {title: 'Total Predicted Impact Score'},
                 margin: {t: 70}
             };
@@ -493,6 +545,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPaginatedImpacts();
     });
 });
+// --- DYNAMIC AI EVALUATION LOGIC ---
+async function loadEvaluation() {
+    const modal = document.getElementById('evalModal');
+    const modalBody = document.getElementById('evalModalBody');
+    
+    // Grab the current active facility and slider value
+    const facName = document.getElementById('baseFacility').value || 'Unknown Facility';
+    const loadChangePct = document.getElementById('loadChange').value || '0';
+    
+    // Grab the current year and impact category filters
+    const impactCategory = document.getElementById('categoryFilter').value || 'All Impact Categories';
+    const year = document.getElementById('yearFilter').value || 'All Years';
+    
+    // Open the modal immediately
+    modal.style.display = 'flex';
+    modalBody.innerHTML = '<p style="text-align: center; color: #555;"><i>Generating facility-specific AI evaluation via Groq...</i></p>';
+
+    try {
+        // Pass all parameters securely to the backend
+        const query = new URLSearchParams({
+            facility: facName,
+            loadChange: loadChangePct,
+            impactCategory: impactCategory,
+            year: year
+        });
+        
+        const res = await fetch(`/api/evaluate-model?${query.toString()}`);
+        const data = await res.json();
+        
+        if (data.evaluation) {
+            modalBody.innerHTML = data.evaluation;
+        } else {
+            modalBody.innerHTML = '<p style="color: #dc3545;">Failed to load evaluation from Groq.</p>';
+        }
+    } catch (error) {
+        console.error("Error fetching AI evaluation:", error);
+        modalBody.innerHTML = '<p style="color: #dc3545;">Error connecting to the AI service.</p>';
+    }
+}
 </script>
 
 </body>
