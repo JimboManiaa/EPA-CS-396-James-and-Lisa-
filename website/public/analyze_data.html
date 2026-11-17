@@ -35,64 +35,78 @@
 
     <!-- Content begins here -->
 
-    <h2>Explore Environmental Impacts (EPA TRACI 2.2)</h2>
+    <h2>Analyze Data</h2>
+    <h3>Explore Environmental Impacts using TRACI 2.2 Data</h3>
+
     <hr>
 
+    <!-- About Content -->
     <div class="about_content">
         <p>
-            This module combines reported <b>CAMPD</b> annual emissions (converted from short tons to kilograms: 1 short ton = 907.18474 kg) with <b>EPA TRACI 2.2</b> characterization factors to estimate potential environmental and human-health impacts.
-            This calculation is done through 4 steps.
-            
-            <p style="margin-left: 30px; line-height: 1.6;">
-                <br>Step 1: The system retreives annual emission mass
-                for a specific pollutant (e.g., CO2, SO2, or NOx). <br>Step 2: Mass is converted from short tons into kilograms by multirplying
-                the raw value by the contsant 907.18474. <br>Step 3: The TRACI 2.2 characterization factor
-                values are assigned to the poulltant for the selected impact category (e.g., global warming, acidification, or smog formation). <br>Step 4: The final impact score is calculated by multiplying the poluutant mass in kilograms by the TRACI factor value.
-            </p>
+            Through this page, you may estimate the human and environmental health impacts of powerplant facilities across the United States. 
+            Using reported CAMPD annual emissions (converted from short tons to kilograms: 1 short ton = 907.18474 kg) and EPA Traci 2.2 characterization factors, we have calculated potential impact through 4 steps:
         </p>
+
+        <ul>
+            <li><u>Step 1</u>: The webpage retreives annual emission mass for a specific pollutant (e.g., CO2, SO2, or NOx).</li>
+            <li><u>Step 2</u>: Mass is converted from short tons into kilograms by multirplying the raw value by the contsant 907.18474.</li>
+            <li><u>Step 3</u>: The TRACI 2.2 characterization factor values are assigned to the poulltant for the selected impact category (e.g., global warming, acidification, or smog formation).</li>
+            <li><u>Step 4</u>: The final impact score is calculated by multiplying the poluutant mass in kilograms by the TRACI factor value.</li>
+        </ul>
+
     </div>
 
+    <!-- Impact Filter -->
     <div class="info_content">
         <label class="search_label">Impact Filter</label>
-        <form id="explore-filter-form" onsubmit="return false;">
+
+            <!-- Category Filter -->
             <label for="categoryFilter">Impact Category:</label>
-            <select id="categoryFilter" name="categoryFilter">
+            <select id="categoryFilter" name="categoryFilter" class="ana_filt">
                 <option value="">All Impact Categories</option>
             </select>
 
+            <!-- Year Filter -->
             <label for="yearFilter">Reporting Year:</label>
-            <input type="number" id="yearFilter" name="yearFilter" placeholder="e.g. 2024">
+            <input type="number" id="yearFilter" name="yearFilter" placeholder="e.g. 2024" class="ana_filt">
+            
+            <hr style="width: 300px;margin-left: 0; margin-right: auto;">
 
-            <button type="button" id="applyExploreBtn">Calculate Impacts</button>
+            <button type="button" id="applyExploreBtn">Calculate Impact</button>
         </form>
     </div>
     <hr>
 
-    <!-- Dashboard Section -->
+    <!-- Dashboard Section ========================================================= -->
     <h2>Data Explorer & Sensitivity Dashboard</h2>
     
-    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+    <div class="ana_dashboard">
         
         <!-- Main Chart Container -->
-        <div style="flex: 2; border: 2px solid #ccc; padding: 15px; background: #fff; min-width: 500px;">
-            <div id="plotlyChart" style="height: 400px; width: 100%;"></div>
+        <div class="content_chart">
+        
+            <!-- The Charts -->
+            <div id="plotlyChart"></div>
             
-            <!-- Chart Type Toggles (Wireframe Bottom Bar) -->
-            <div style="margin-top: 15px; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
-                <button class="btn" onclick="updateChartType('line')">Trend (Line)</button>
-                <button class="btn" onclick="updateChartType('bar')">Comparison (Bar)</button>
-                <button class="btn" style="background-color: #dc3545;" onclick="updateChartType('sensitivity')">Sensitivity Curve</button>
-                <button class="btn" style="background-color: #dc3545;" onclick="updateChartType('scenario')">Scenario Bar Chart</button>
-            </div>
+            <!-- Chart Type Buttons -->
+             <div class="btn_bar">
+                <button class="btn_bar_indiv" onclick="updateChartType('line')">Trend (Line)</button>
+                <button class="btn_bar_indiv" onclick="updateChartType('bar')">Comparison (Bar)</button>
+                <button class="btn_bar_indiv" onclick="updateChartType('sensitivity')">Sensitivity Curve</button>
+                <button class="btn_bar_indiv" onclick="updateChartType('scenario')">Scenario Bar Chart</button>
+             </div>
 
-            <!-- One-Variable-At-A-Time Sensitivity Controls (Hidden unless sensitivity is active) -->
-            <div id="sensitivityControls" style="display: none; margin-top: 15px; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; text-align: center;">
-                <h4 style="margin-top: 0;">Sensitivity Parameters</h4>
+             <!-- Sensitivity Controls Pop-Up Box -->
+            <div id="sensitivityControls">
+                <h4>Sensitivity Parameters</h4>
                 
-                <label for="baseFacility"><b>Baseline Facility:</b></label>
-                <select id="baseFacility" onchange="renderDashboard()" style="margin-right: 15px;"></select>
+                <!-- Baseline Selector -->
+                <label for="baseFacility">Baseline Facility:</label>
+                <select id="baseFacility" onchange="renderDashboard()"></select>
+                <br><br>
 
-                <label for="loadChangeSlider"><b>Gross Load % Change:</b></label>
+                <!-- Gross load Selector -->
+                <label for="loadChangeSlider">Gross Load % Change:</label>
 
                 <!-- Slider input with CSS overrides and performance fixes -->
                 <input type="range" id="loadChangeSlider" min="-50" max="50" value="10" step="5" 
@@ -103,19 +117,25 @@
                 <!-- Number input -->
                 <input type="number" id="loadChange" value="10" min="-50" max="50" step="5" 
                     oninput="document.getElementById('loadChangeSlider').value = this.value; renderDashboard();" 
-                    style="width: 70px; vertical-align: middle;">
+                    class="ana_filt">
                 
-                <p id="rangeWarning" style="color: #dc3545; font-size: 0.9em; display: none; margin-top: 10px; font-weight: bold;">
-                    Warning: The selected percentage change extends beyond typical operational variances and may fall outside standard training-data bounds.
+                <p id="rangeWarning" style="color: #dc3545; display: none;">
+                    <b>Warning</b>: The selected percentage change extends beyond typical operational variances and may fall outside standard training-data bounds.
                 </p>
-            <button type="button" class="btn" style="background-color: #17a2b8; margin-top: 15px;" onclick="loadEvaluation()">View Model Evaluation</button>            </div>
+
+                <!-- Button -->
+                <br>
+                <br>
+                <button type="button" class="ExploreBtn" onclick="loadEvaluation()">View Model Evaluation</button>
+            </div>
         </div>
 
         <!-- Rankings Container (Wireframe Right Side) -->
-        <div style="flex: 1; border: 2px solid #ccc; padding: 15px; background: #fff; min-width: 250px;">
-            <h3 style="margin-top: 0; text-align: center;">Facility Impact Rankings</h3>
-            <div style="max-height: 400px; overflow-y: auto;">
-                <ol id="rankingsList" style="line-height: 1.8; padding-left: 40px;">
+        <div class="contentRankings">
+            <h3 class="rank_title">Facility Impact Rankings</h3>
+
+            <div class="rank_list">
+                <ol id="rankingsList">
                     <li><i>Loading rankings...</i></li>
                 </ol>
             </div>
@@ -123,6 +143,7 @@
     </div>
     <hr>
 
+    <!-- Table for TRACI 2.2 Characterization Factors -->
     <h2>TRACI 2.2 Reference Characterization Factors</h2>
 
     <div class="db_holder">
@@ -144,15 +165,15 @@
 
     <hr>
 
+    <!-- SEARCH Calculated Facility and Results -->
     <h2>Calculated Facility & Unit Impact Results</h2>
 
-    <div class="info_content">
         <form role="search" id="search-form" onsubmit="return false;">
             <label for="site-search">Search impact results:</label>
             <input type="search" id="site-search" name="q" placeholder="Type here to search..." required>
         </form>
-    </div>
 
+    <!-- Table for Calculated Facility and Results -->
     <div class="db_holder">
         <table class="db_table">
             <thead>
