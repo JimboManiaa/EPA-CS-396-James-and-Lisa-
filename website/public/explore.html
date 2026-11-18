@@ -80,34 +80,25 @@
         <!-- Divide the Content Box =========================================================== -->
         <div class="vis_cols1">
 
-            <!-- State Level Visualizer -->
-            <div class="info_content">
-                <h3>State Level Visualization</h3>
+<!-- State Level Visualizer -->
+<div class="info_content">
+    <h3 id="stateMapTitle">State-Level Emissions &amp; Load Map</h3>
 
+    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+        <label for="mapMetricSelect"><strong>Metric:</strong></label>
+        <select id="mapMetricSelect">
+            <option value="co2_mass">CO2 Emissions (tons)</option>
+            <option value="gross_load">Gross Load (MWh)</option>
+            <option value="intensity">CO2 Intensity (tons/MWh)</option>
+            <option value="so2_mass">SO2 Emissions (tons)</option>
+            <option value="nox_mass">NOx Emissions (tons)</option>
+        </select>
 
-                <!--<div class="vis_cols1">
-                     State Level Visualizer 
-                    <div class="info_content">
-                        <h3 id="stateMapTitle">State-Level Emissions & Load Map</h3>
-                        
-                         Filter & Data Export Controls 
-                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
-                            <label for="mapMetricSelect"><strong>Metric:</strong></label>
-                            <select id="mapMetricSelect">
-                                <option value="co2_mass">CO2 Emissions (tons)</option>
-                                <option value="gross_load">Gross Load (MWh)</option>
-                                <option value="intensity">CO2 Intensity (tons/MWh)</option>
-                                <option value="so2_mass">SO2 Emissions (tons)</option>
-                                <option value="nox_mass">NOx Emissions (tons)</option>
-                            </select>
+        <button type="button" id="downloadMapCsvBtn">Download Map Data (CSV)</button>
+    </div>
 
-                            <button type="button" id="downloadMapCsvBtn">Download Map Data (CSV)</button>
-                        </div>
-
-                         Plotly Map Container (Plotly also includes built-in camera PNG export & zoom) 
-                        <div id="stateMapContainer" style="width: 100%; height: 420px;"></div>
-                    </div> 
-                </div> -->
+    <div id="stateMapContainer" style="width: 100%; height: 420px;"></div>
+</div>
 
 
 
@@ -252,6 +243,12 @@
                 const tableBody = document.getElementById("scrollBody");
                 tableBody.innerHTML = `<p>Failed to load datasets.</p>`;
             });
+            document.getElementById('mapMetricSelect')?.addEventListener('change', () => {
+                 renderStateMap();
+            });
+            document.getElementById('downloadMapCsvBtn')?.addEventListener('click', () => {
+                downloadStateMapCSV();
+            });
     });
 
     // Select dataset function --------------
@@ -314,6 +311,12 @@
                 break;
         }
     }
+    document.getElementById('mapMetricSelect')?.addEventListener('change', () => {
+        renderStateMap();
+    });
+    document.getElementById('downloadMapCsvBtn')?.addEventListener('click', () => {
+        downloadStateMapCSV();
+    });
     // Render line chart functionality -------------------------------
     function renderLineChart(records) {
         const ctx = document.getElementById('datasetChart').getContext('2d');
@@ -655,6 +658,168 @@
                 }
             }
         });
+    }
+    let lastStateMapRows = [];
+
+    function renderStateMap() {
+        const mapDiv = document.getElementById('stateMapContainer');
+        if (!mapDiv || !currentDataset || !currentDataset.records) return;
+
+        const metric = document.getElementById('mapMetricSelect')?.value || 'co2_mass';
+        const metricLabels = {
+            co2_mass:   { title: 'CO2 Emissions (tons)', unit: 'tons' },
+            gross_load: { title: 'Gross Load (MWh)', unit: 'MWh' },
+            intensity:  { title: 'CO2 Intensity (tons/MWh)', unit: 'tons/MWh' },
+            so2_mass:   { title: 'SO2 Emissions (tons)', unit: 'tons' },
+            nox_mass:   { title: 'NOx Emissions (tons)', unit: 'tons' }
+        };
+        const activeMeta = metricLabels[metric] || metricLabels.co2_mass;
+
+        // Aggregate records by 2-letter state code
+        const byState = {};
+        currentDataset.records.forEach(rec => {
+            const st = rec.Unit?.Facility?.state;
+            if (!st || st === 'Unknown') return;
+
+            if (!byState[st]) {
+                byState[st] = {
+                    co2: 0, so2: 0, nox: 0, load: 0,
+                    facilities: new Set(),
+                    records: 0
+                };
+            }
+            if (rec.co2_mass != null) byState[st].co2 += Number(rec.co2_mass) || 0;
+            if (rec.so2_mass != null) byState[st].so2 += Number(rec.so2_mass) || 0;
+            if (rec.nox_mass != null) byState[st].nox += Number(rec.nox_mass) || 0;
+            if (rec.gross_load != null) byState[st].load += Number(rec.gross_load) || 0;
+            if (rec.Unit?.Facility?.facility_name) {
+                byState[st].facilities.add(rec.Unit.Facility.facility_name);
+            }
+            byState[st].records++;
+        });
+
+        const states = Object.keys(byState).sort();
+        if (states.length === 0) {
+            mapDiv.innerHTML = '<p style="padding:12px;">No state-level geographic data available for this dataset.</p>';
+            return;
+        }
+
+        const zValues = [];
+        const customHoverText = [];
+        lastStateMapRows = [];
+
+        states.forEach(st => {
+            const s = byState[st];
+            const intensity = s.load > 0 ? (s.co2 / s.load) : null;
+
+            let zVal = null;
+            if (metric === 'co2_mass') zVal = s.co2;
+            else if (metric === 'gross_load') zVal = s.load;
+            else if (metric === 'so2_mass') zVal = s.so2;
+            else if (metric === 'nox_mass') zVal = s.nox;
+            else if (metric === 'intensity') zVal = intensity;
+
+            zValues.push(zVal);
+
+            // Full state data shown on hover
+            customHoverText.push(
+                `<b>State: ${st}</b><br>` +
+                `Facilities: ${s.facilities.size} (${s.records} records)<br>` +
+                `CO2: ${s.co2.toLocaleString(undefined, { maximumFractionDigits: 1 })} tons<br>` +
+                `SO2: ${s.so2.toLocaleString(undefined, { maximumFractionDigits: 1 })} tons<br>` +
+                `NOx: ${s.nox.toLocaleString(undefined, { maximumFractionDigits: 1 })} tons<br>` +
+                `Gross Load: ${s.load.toLocaleString(undefined, { maximumFractionDigits: 1 })} MWh<br>` +
+                `CO2 Intensity: ${intensity !== null ? intensity.toFixed(4) + ' tons/MWh' : 'N/A'}`
+            );
+
+            lastStateMapRows.push({
+                State: st,
+                Facilities: s.facilities.size,
+                Records: s.records,
+                CO2_tons: Number(s.co2.toFixed(2)),
+                SO2_tons: Number(s.so2.toFixed(2)),
+                NOx_tons: Number(s.nox.toFixed(2)),
+                Gross_Load_MWh: Number(s.load.toFixed(2)),
+                CO2_Intensity_tons_per_MWh: intensity !== null ? Number(intensity.toFixed(4)) : ''
+            });
+        });
+
+        const defaultLineColors = states.map(() => '#ffffff');
+        const defaultLineWidths = states.map(() => 1);
+
+        const trace = {
+            type: 'choropleth',
+            locationmode: 'USA-states',
+            locations: states,
+            z: zValues,
+            text: customHoverText,
+            hoverinfo: 'text',
+            colorscale: 'Blues',
+            reversescale: true,
+            marker: {
+                line: {
+                    color: defaultLineColors,
+                    width: defaultLineWidths
+                }
+            },
+            colorbar: {
+                title: activeMeta.unit,
+                thickness: 14
+            }
+        };
+
+        const layout = {
+            title: { text: activeMeta.title, font: { size: 15 } },
+            geo: {
+                scope: 'usa',
+                showlakes: true,
+                lakecolor: 'rgb(255, 255, 255)',
+                landcolor: '#f0f0f0',
+                subunitcolor: '#cccccc'
+            },
+            margin: { l: 0, r: 0, t: 35, b: 0 },
+            hoverlabel: {
+                bgcolor: '#1e293b',
+                bordercolor: '#f59e0b',
+                font: { color: '#ffffff', size: 13 }
+            }
+        };
+
+        Plotly.newPlot(mapDiv, [trace], layout, { responsive: true }).then(() => {
+            // Highlight hovered state border
+            mapDiv.on('plotly_hover', (eventData) => {
+                if (!eventData || !eventData.points || !eventData.points.length) return;
+                const idx = eventData.points[0].pointNumber;
+                const lineColors = states.map((_, i) => i === idx ? '#f59e0b' : '#ffffff');
+                const lineWidths = states.map((_, i) => i === idx ? 3.5 : 1);
+                Plotly.restyle(mapDiv, {
+                    'marker.line.color': [lineColors],
+                    'marker.line.width': [lineWidths]
+                });
+            });
+
+            // Reset border when cursor leaves state
+            mapDiv.on('plotly_unhover', () => {
+                Plotly.restyle(mapDiv, {
+                    'marker.line.color': [defaultLineColors],
+                    'marker.line.width': [defaultLineWidths]
+                });
+            });
+        });
+    }
+
+    function downloadStateMapCSV() {
+        if (!lastStateMapRows.length) return;
+        const keys = Object.keys(lastStateMapRows[0]);
+        const csv = [
+            keys.join(','),
+            ...lastStateMapRows.map(r => keys.map(k => JSON.stringify(r[k] ?? '')).join(','))
+        ].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'state_level_visualization_data.csv';
+        link.click();
     }
     </script>
 </body>

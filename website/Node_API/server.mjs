@@ -99,28 +99,35 @@ app.get('/api/datasets', async (req, res) => {
   }
 });
 
-// 5. API Route to get full normalized details for a specific dataset/facility
+// 5. API Route to get full normalized details for a specific dataset (or all datasets)
 app.get('/api/datasets/:id', async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Support "* All Uploaded Data" from the Explore wireframe
+    if (id === 'all') {
+      const records = await AnnualRecord.findAll({
+        include: [{ model: Unit, include: [Facility] }],
+        limit: 5000
+      });
+      return res.json({ records });
+    }
+
     const dataset = await Dataset.findByPk(id);
-    
     if (!dataset) {
       return res.status(404).json({ error: 'Dataset not found' });
     }
 
-    // Query records belonging to the specific dataset_id, including related tables
     let records = await AnnualRecord.findAll({
       where: { dataset_id: id },
       include: [{ model: Unit, include: [Facility] }]
     });
 
-    // Fallback for initial seeded data which may not have dataset_id explicitly linked
     if (records.length === 0 && dataset.reporting_year) {
-       records = await AnnualRecord.findAll({
-         where: { reporting_year: dataset.reporting_year },
-         include: [{ model: Unit, include: [Facility] }]
-       });
+      records = await AnnualRecord.findAll({
+        where: { reporting_year: dataset.reporting_year },
+        include: [{ model: Unit, include: [Facility] }]
+      });
     }
 
     if (!records || records.length === 0) {
@@ -133,7 +140,6 @@ app.get('/api/datasets/:id', async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
 // API Route for Real-Unit Slider Metric Ranges
 app.get('/api/metric-ranges', async (req, res) => {
   try {
