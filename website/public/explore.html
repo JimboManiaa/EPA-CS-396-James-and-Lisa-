@@ -110,24 +110,35 @@
 
 
 
+    <!-- Rankings -->
+    <div class="info_content">
+        <h3 id="rankingTitle">Data Rankings</h3>
 
+        <!-- Controls: Entity, Metric, Sort High/Low -->
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+            <select id="rankingEntitySelect">
+                <option value="facility">By Facility</option>
+                <option value="unit">By Unit</option>
+                <option value="state">By State</option>
+            </select>
 
+            <select id="rankingMetricSelect">
+                <option value="co2_mass">CO2 Emissions (tons)</option>
+                <option value="so2_mass">SO2 Emissions (tons)</option>
+                <option value="nox_mass">NOx Emissions (tons)</option>
+                <option value="gross_load">Gross Load (MWh)</option>
+                <option value="intensity">CO2 Intensity (tons/MWh)</option>
+            </select>
 
-
-
-
-
-
-
-
-
-            </div>
-
-            <!-- Rankings -->
-            <div class="info_content">
-                <h3>Data Rankings</h3>
-            </div>
+            <button type="button" id="rankDescBtn" title="Sort High to Low" style="font-weight: bold;">↓ High</button>
+            <button type="button" id="rankAscBtn" title="Sort Low to High">↑ Low</button>
         </div>
+
+        <!-- Scrollable Numbered Ranking List -->
+        <div id="rankingList" style="max-height: 420px; overflow-y: auto; border: 1px solid #ccc; padding: 8px 12px; background: #fff;">
+            <p>Select a dataset to view rankings.</p>
+        </div>
+    </div>
 
         <!-- Data Comparison Section ============================================================ -->
         <h2>Compare Data</h2>
@@ -249,6 +260,22 @@
             document.getElementById('downloadMapCsvBtn')?.addEventListener('click', () => {
                 downloadStateMapCSV();
             });
+            document.getElementById('rankingEntitySelect')?.addEventListener('change', renderRankings);
+            document.getElementById('rankingMetricSelect')?.addEventListener('change', renderRankings);
+
+            document.getElementById('rankDescBtn')?.addEventListener('click', () => {
+                rankingOrder = 'desc';
+                document.getElementById('rankDescBtn').style.fontWeight = 'bold';
+                document.getElementById('rankAscBtn').style.fontWeight = 'normal';
+                renderRankings();
+            });
+
+            document.getElementById('rankAscBtn')?.addEventListener('click', () => {
+                rankingOrder = 'asc';
+                document.getElementById('rankAscBtn').style.fontWeight = 'bold';
+                document.getElementById('rankDescBtn').style.fontWeight = 'normal';
+                renderRankings();
+            });
     });
 
     // Select dataset function --------------
@@ -265,6 +292,8 @@
             
             currentDataset = await response.json();
             renderCurrentChart();
+            renderStateMap();
+            renderRankings();
         } catch (error) {
             console.error("Error loading dataset records for chart:", error);
         }
@@ -317,6 +346,7 @@
     document.getElementById('downloadMapCsvBtn')?.addEventListener('click', () => {
         downloadStateMapCSV();
     });
+
     // Render line chart functionality -------------------------------
     function renderLineChart(records) {
         const ctx = document.getElementById('datasetChart').getContext('2d');
@@ -763,8 +793,14 @@
                 }
             },
             colorbar: {
-                title: activeMeta.unit,
-                thickness: 14
+                title: { text: activeMeta.unit, side: 'top' },
+                orientation: 'h',
+                thickness: 12,
+                len: 0.35,
+                x: 0.95,
+                xanchor: 'right',
+                y: 0.05,
+                yanchor: 'bottom'
             }
         };
 
@@ -820,6 +856,72 @@
         link.href = URL.createObjectURL(blob);
         link.download = 'state_level_visualization_data.csv';
         link.click();
+    }
+    let rankingOrder = 'desc';
+
+    function renderRankings() {
+        const container = document.getElementById('rankingList');
+        if (!container || !currentDataset || !currentDataset.records) return;
+
+        const entity = document.getElementById('rankingEntitySelect')?.value || 'facility';
+        const metric = document.getElementById('rankingMetricSelect')?.value || 'co2_mass';
+
+        const metricUnits = {
+            co2_mass:   'tons',
+            so2_mass:   'tons',
+            nox_mass:   'tons',
+            gross_load: 'MWh',
+            intensity:  'tons/MWh'
+        };
+        const unitLabel = metricUnits[metric] || '';
+
+        // Aggregate records by selected entity (Facility, Unit, or State)
+        const grouped = {};
+        currentDataset.records.forEach(rec => {
+            const facName = rec.Unit?.Facility?.facility_name || 'Unknown';
+            const state = rec.Unit?.Facility?.state || 'Unknown';
+            const unitId = rec.Unit?.epa_unit_id || 'Unknown';
+
+            let key = `${facName} (${state})`;
+            if (entity === 'unit') key = `${facName} - Unit ${unitId} (${state})`;
+            else if (entity === 'state') key = state;
+
+            if (!grouped[key]) {
+                grouped[key] = { co2: 0, so2: 0, nox: 0, load: 0 };
+            }
+            if (rec.co2_mass != null) grouped[key].co2 += Number(rec.co2_mass) || 0;
+            if (rec.so2_mass != null) grouped[key].so2 += Number(rec.so2_mass) || 0;
+            if (rec.nox_mass != null) grouped[key].nox += Number(rec.nox_mass) || 0;
+            if (rec.gross_load != null) grouped[key].load += Number(rec.gross_load) || 0;
+        });
+
+        // Compute selected metric and sort
+        const ranked = Object.entries(grouped)
+            .map(([name, g]) => {
+                let val = null;
+                if (metric === 'co2_mass') val = g.co2;
+                else if (metric === 'so2_mass') val = g.so2;
+                else if (metric === 'nox_mass') val = g.nox;
+                else if (metric === 'gross_load') val = g.load;
+                else if (metric === 'intensity') val = g.load > 0 ? (g.co2 / g.load) : null;
+                return { name, val };
+            })
+            .filter(item => item.val !== null && !isNaN(item.val))
+            .sort((a, b) => rankingOrder === 'desc' ? b.val - a.val : a.val - b.val);
+
+        if (ranked.length === 0) {
+            container.innerHTML = '<p>No ranking data available for this selection.</p>';
+            return;
+        }
+
+        const decimals = metric === 'intensity' ? 4 : 1;
+
+        container.innerHTML = ranked.map((item, idx) => `
+            <div style="display: flex; justify-content: space-between; gap: 12px; padding: 6px 4px; border-bottom: 1px solid #eee; font-size: 0.92rem;">
+                <span><strong>${idx + 1}.</strong> ${item.name}</span>
+                <span style="white-space: nowrap;">${item.val.toLocaleString(undefined, { maximumFractionDigits: decimals })} ${unitLabel}</span>
+            </div>
+        `).join('');
     }
     </script>
 </body>
