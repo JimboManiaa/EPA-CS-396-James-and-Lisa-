@@ -75,6 +75,44 @@
                 </tr>
             </table>
 
+            <!-- Descriptive Statistics (Rubric Section 4.2) -->
+            <div style="margin-top: 15px; background: white; border: 2px solid #d3d7d7; border-radius: 5px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                    <h4 style="margin: 0;">Descriptive Statistics</h4>
+                    <div>
+                        <label for="statsMetricSelect"><strong>Variable:</strong></label>
+                        <select id="statsMetricSelect">
+                            <option value="co2_mass">CO2 Mass (tons)</option>
+                            <option value="so2_mass">SO2 Mass (tons)</option>
+                            <option value="nox_mass">NOx Mass (tons)</option>
+                            <option value="gross_load">Gross Load (MWh)</option>
+                            <option value="heat_input">Heat Input (MMBtu)</option>
+                            <option value="co2_intensity">CO2 Intensity (tons/MWh)</option>
+                            <option value="heat_rate">Heat Rate (MMBtu/MWh)</option>
+                        </select>
+                    </div>
+                </div>
+                <table class="db_table" style="background: white;">
+                    <thead>
+                        <tr>
+                            <th>Count</th>
+                            <th>Missing</th>
+                            <th>Min</th>
+                            <th>Q1 (25%)</th>
+                            <th>Median</th>
+                            <th>Mean</th>
+                            <th>Q3 (75%)</th>
+                            <th>Max</th>
+                            <th>Std Dev</th>
+                            <th>IQR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="descriptiveStatsBody">
+                        <tr><td colspan="10">Select a dataset to view statistics.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
         </div>
 
         <!-- Divide the Content Box =========================================================== -->
@@ -140,9 +178,91 @@
         </div>
     </div>
 
+        </div>
+
         <!-- Data Comparison Section ============================================================ -->
         <h2>Compare Data</h2>
         <hr>
+
+        <div class="info_content">
+            <div class="expanding">
+                <input type="checkbox" id="trigger" checked>
+                <label for="trigger" class="exp_label">Compare Datasets</label>
+
+                <div class="expanding_content">
+                    <p>Which dataset would you like to compare to?</p>
+                    <hr>
+
+                    <!-- Scrollable Dataset Selector -->
+                    <div class="scroll_container">
+                        <div class="scroll_list" id="compareScrollBody">
+                            <!-- auto populating list -->
+                        </div>
+                    </div>
+
+                    <!-- Side-by-Side Comparison Charts -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div>
+                            <h3 id="compareTitleA">Dataset A</h3>
+                            <div class="vis_content chart_style">
+                                <canvas id="compareChartA"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 id="compareTitleB">Dataset B</h3>
+                            <div class="vis_content chart_style">
+                                <canvas id="compareChartB"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shared Chart Type Tabs -->
+                    <table class="nav_bar" id="compareChartTabs" style="margin-top: 10px;">
+                        <tr>
+                            <td class="vis_cell active" data-compare-type="line">Line Chart</td>
+                            <td class="vis_cell" data-compare-type="bar">Bar Chart</td>
+                            <td class="vis_cell" data-compare-type="histogram">Histogram</td>
+                            <td class="vis_cell" data-compare-type="boxplot">Box Plot</td>
+                            <td class="vis_cell" data-compare-type="scatter">Scatter Plot</td>
+                            <td class="vis_cell" data-compare-type="heatmap">Heat Map</td>
+                        </tr>
+                    </table>
+
+                    <!-- Comparison Summary & Differences -->
+                    <div style="margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <h3 style="margin: 0;">Comparison Summary &amp; Differences</h3>
+                            <button type="button" id="exportCompareCsvBtn">Export Comparison (CSV)</button>
+                        </div>
+                        <table class="db_table" style="background: white;">
+                            <thead>
+                                <tr>
+                                    <th>Indicator</th>
+                                    <th id="cmpColA">Dataset A</th>
+                                    <th id="cmpColB">Dataset B</th>
+                                    <th>Absolute Diff (B - A)</th>
+                                    <th>% Diff</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compareSummaryBody">
+                                <tr><td colspan="5">Select a dataset above to compare.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Assisted Comparison -->
+                    <div style="margin-top: 15px;">
+                        <h3>Assisted Comparison</h3>
+                        <button type="button" id="generateComparisonBtn" style="padding: 8px 16px; cursor: pointer; margin-bottom: 10px;">
+                            Generate Comparison
+                        </button>
+                        <div id="assistedComparisonOutput" style="background: white; border: 2px solid #ccc; border-radius: 5px; padding: 12px; min-height: 80px;">
+                            <p style="color: #666; margin: 0;">Click "Generate Comparison" for an AI-assisted analysis of the two datasets.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
 
 
@@ -216,7 +336,7 @@
 
     // Unclick inactive datasets from list
     function setActiveChartButton(activeBtnId) {
-        const buttons = document.querySelectorAll(".vis_cell");
+        const buttons = document.querySelectorAll("#lineChartBtn, #barChartBtn, #histogramBtn, #boxPlotBtn, #scatterPlotBtn, #heatMapBtn");
         buttons.forEach(btn => btn.classList.remove("active"));
         const activeBtn = document.getElementById(activeBtnId);
         if (activeBtn) activeBtn.classList.add("active");
@@ -247,13 +367,16 @@
         fetch('/api/datasets')
             .then(response => response.json())
             .then(data => {
-                renderRows(data);
+                const withAll = [{ id: 'all', name: '* All Uploaded Data', facility: 'All Sources' }, ...data];
+                renderRows(withAll);
+                renderCompareRows(withAll);
             })
             .catch(error => {
                 console.error("Error loading datasets:", error);
                 const tableBody = document.getElementById("scrollBody");
                 tableBody.innerHTML = `<p>Failed to load datasets.</p>`;
             });
+            document.getElementById('statsMetricSelect')?.addEventListener('change', renderDescriptiveStats);
             document.getElementById('mapMetricSelect')?.addEventListener('change', () => {
                  renderStateMap();
             });
@@ -276,10 +399,22 @@
                 document.getElementById('rankDescBtn').style.fontWeight = 'normal';
                 renderRankings();
             });
+
+            document.querySelectorAll('#compareChartTabs .vis_cell').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    compareChartType = tab.dataset.compareType;
+                    document.querySelectorAll('#compareChartTabs .vis_cell').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    renderComparisonCharts();
+                });
+            });
+            document.getElementById('generateComparisonBtn')?.addEventListener('click', generateAssistedComparison);
+            document.getElementById('exportCompareCsvBtn')?.addEventListener('click', exportComparisonCSV);
     });
 
     // Select dataset function --------------
     async function selectDataset(dataset) {
+        currentDatasetName = dataset.name;
         // Change name on-load
         const titleElement = document.getElementById("selectedDatasetName");
         if (titleElement) {
@@ -292,8 +427,11 @@
             
             currentDataset = await response.json();
             renderCurrentChart();
+            renderDescriptiveStats();
             renderStateMap();
             renderRankings();
+            renderComparisonCharts();
+            renderComparisonSummary();
         } catch (error) {
             console.error("Error loading dataset records for chart:", error);
         }
@@ -352,14 +490,15 @@
         const ctx = document.getElementById('datasetChart').getContext('2d');
 
         const labels = records.map(r => r.reporting_year);
-        const emissionsData = records.map(r => Number(r.co2_mass) || 0);
-        const grossLoadData = records.map(r => Number(r.gross_load) || 0);
+        const emissionsData = records.map(r => (r.co2_mass != null && !isNaN(Number(r.co2_mass))) ? Number(r.co2_mass) : null);
+        const grossLoadData = records.map(r => (r.gross_load != null && !isNaN(Number(r.gross_load))) ? Number(r.gross_load) : null);
 
         // Calculate CO2 intensity
         const intensityData = records.map( r => {
-            const co2 = Number(r.co2_mass) || 0;
-            const load = Number(r.gross_load) || 0;
-            return load > 0 ? Number((co2 / load).toFixed(4)) : null;
+            if (r.co2_mass == null || r.gross_load == null) return null;
+            const co2 = Number(r.co2_mass);
+            const load = Number(r.gross_load);
+            return (!isNaN(co2) && !isNaN(load) && load > 0) ? Number((co2 / load).toFixed(4)) : null;
 
 
 
@@ -423,7 +562,7 @@
                         type: 'linear',
                         display: true,
                         position: 'right',
-                        title: {display: true, text: 'IIntensity (tons/MWh)'},
+                        title: {display: true, text: 'CO2 Intensity (tons/MWh)'},
                         grid: { drawOnChartArea: false }
                     }
                 }
@@ -922,6 +1061,391 @@
                 <span style="white-space: nowrap;">${item.val.toLocaleString(undefined, { maximumFractionDigits: decimals })} ${unitLabel}</span>
             </div>
         `).join('');
+    }
+
+    // ==============================================================================
+    // DATA COMPARISON LOGIC
+    // ==============================================================================
+    let currentDatasetName = 'Dataset A';
+    let compareDataset = null;
+    let compareDatasetName = 'Dataset B';
+    let compareChartA = null;
+    let compareChartB = null;
+    let compareChartType = 'line';
+    let lastCompareSummary = [];
+
+    function renderCompareRows(data) {
+        const list = document.getElementById("compareScrollBody");
+        if (!list) return;
+        list.innerHTML = "";
+
+        data.forEach((entry, index) => {
+            const row = document.createElement("p");
+            row.innerHTML = `${entry.name} (${entry.facility})`;
+
+            // Default to second item if available so A and B start different
+            if (index === (data.length > 1 ? 1 : 0)) {
+                row.classList.add("active");
+                selectCompareDataset(entry);
+            }
+
+            row.addEventListener("click", () => {
+                list.querySelectorAll("p").forEach(i => i.classList.remove("active"));
+                row.classList.add("active");
+                selectCompareDataset(entry);
+            });
+
+            list.appendChild(row);
+        });
+    }
+
+    async function selectCompareDataset(dataset) {
+        compareDatasetName = dataset.name;
+        try {
+            const response = await fetch(`/api/datasets/${dataset.id}`);
+            if (!response.ok) throw new Error('Failed to fetch comparison dataset');
+            compareDataset = await response.json();
+            renderComparisonCharts();
+            renderComparisonSummary();
+        } catch (error) {
+            console.error("Error loading comparison dataset:", error);
+        }
+    }
+
+    function flattenRecords(rawRecords) {
+        return (rawRecords || []).map(rec => ({
+            ...rec,
+            facility: rec.Unit?.Facility?.facility_name || 'Unknown',
+            state: rec.Unit?.Facility?.state || 'Unknown',
+            epa_unit_id: rec.Unit?.epa_unit_id || 'Unknown',
+            primary_fuel: rec.Unit?.primary_fuel || 'Unknown'
+        }));
+    }
+
+    function buildCompareChart(canvasId, existingChart, records, type) {
+        if (existingChart) existingChart.destroy();
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !records || records.length === 0) return null;
+        const ctx = canvas.getContext('2d');
+
+        if (type === 'line') {
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: records.map(r => r.reporting_year),
+                    datasets: [
+                        { label: 'CO2 (tons)', data: records.map(r => (r.co2_mass != null && !isNaN(Number(r.co2_mass))) ? Number(r.co2_mass) : null), borderColor: '#989898', yAxisID: 'y', tension: 0.1 },
+                        { label: 'Gross Load (MWh)', data: records.map(r => (r.gross_load != null && !isNaN(Number(r.gross_load))) ? Number(r.gross_load) : null), borderColor: '#005FA3', yAxisID: 'y1', tension: 0.1 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { type: 'linear', position: 'left', title: { display: true, text: 'CO2 (tons)' } },
+                        y1: { type: 'linear', position: 'right', title: { display: true, text: 'Gross Load (MWh)' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        }
+
+        if (type === 'bar') {
+            const agg = {};
+            records.forEach(r => {
+                const k = r.state || 'Unknown';
+                agg[k] = (agg[k] || 0) + (Number(r.co2_mass) || 0);
+            });
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(agg),
+                    datasets: [{ label: 'Total CO2 by State (tons)', data: Object.values(agg), backgroundColor: 'rgba(54, 162, 235, 0.6)' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        if (type === 'histogram') {
+            const vals = records.map(r => Number(r.co2_mass)).filter(v => !isNaN(v) && v > 0);
+            if (!vals.length) return null;
+            const min = Math.min(...vals), max = Math.max(...vals);
+            const binCount = Math.min(10, Math.max(1, Math.ceil(Math.sqrt(vals.length))));
+            const binSize = (max - min) / binCount || 1;
+            const bins = Array(binCount).fill(0);
+            vals.forEach(v => { bins[Math.min(binCount - 1, Math.floor((v - min) / binSize))]++; });
+            const labels = bins.map((_, i) => `${(min + i * binSize).toFixed(0)}-${(min + (i + 1) * binSize).toFixed(0)}`);
+            return new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets: [{ label: 'CO2 Frequency', data: bins, backgroundColor: 'rgba(255, 159, 64, 0.6)', barPercentage: 1, categoryPercentage: 1 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        if (type === 'boxplot') {
+            return new Chart(ctx, {
+                type: 'boxplot',
+                data: {
+                    labels: ['CO2 Mass (tons)', 'Gross Load (MWh)'],
+                    datasets: [{
+                        label: 'Distribution',
+                        backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                        borderColor: 'rgb(153, 102, 255)',
+                        data: [
+                            records.map(r => Number(r.co2_mass)).filter(v => !isNaN(v)),
+                            records.map(r => Number(r.gross_load)).filter(v => !isNaN(v))
+                        ]
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        if (type === 'scatter') {
+            const pts = records.map(r => ({ x: Number(r.gross_load), y: Number(r.co2_mass) })).filter(p => !isNaN(p.x) && !isNaN(p.y));
+            return new Chart(ctx, {
+                type: 'scatter',
+                data: { datasets: [{ label: 'Gross Load vs CO2', data: pts, backgroundColor: 'rgba(75, 192, 192, 0.6)' }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Gross Load (MWh)' } },
+                        y: { title: { display: true, text: 'CO2 (tons)' } }
+                    }
+                }
+            });
+        }
+
+        if (type === 'heatmap') {
+            const fields = ['co2_mass', 'gross_load', 'heat_input', 'so2_mass', 'nox_mass'].filter(f =>
+                records.some(r => r[f] != null && !isNaN(Number(r[f])))
+            );
+            const matrixData = [];
+            fields.forEach((fx, i) => {
+                fields.forEach((fy, j) => {
+                    const pairs = records.map(r => [Number(r[fx]), Number(r[fy])]).filter(([x, y]) => !isNaN(x) && !isNaN(y));
+                    const corr = i === j ? 1 : calculatePearsonCorrelation(pairs.map(p => p[0]), pairs.map(p => p[1]));
+                    matrixData.push({ x: fx, y: fy, v: corr });
+                });
+            });
+            return new Chart(ctx, {
+                type: 'matrix',
+                data: {
+                    datasets: [{
+                        label: 'Correlation',
+                        data: matrixData,
+                        backgroundColor: c => {
+                            const raw = c.dataset.data[c.dataIndex];
+                            if (!raw) return 'rgba(0,0,0,0.1)';
+                            const a = Math.max(0.15, Math.abs(raw.v));
+                            return raw.v >= 0 ? `rgba(54, 162, 235, ${a})` : `rgba(255, 99, 132, ${a})`;
+                        },
+                        width: ({ chart }) => ((chart.chartArea || {}).width || 200) / fields.length - 2,
+                        height: ({ chart }) => ((chart.chartArea || {}).height || 200) / fields.length - 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { type: 'category', labels: fields, grid: { display: false } },
+                        y: { type: 'category', labels: fields, offset: true, grid: { display: false } }
+                    }
+                }
+            });
+        }
+        return null;
+    }
+
+    function renderComparisonCharts() {
+        document.getElementById('compareTitleA').textContent = currentDatasetName;
+        document.getElementById('compareTitleB').textContent = compareDatasetName;
+
+        if (currentDataset?.records) {
+            compareChartA = buildCompareChart('compareChartA', compareChartA, flattenRecords(currentDataset.records), compareChartType);
+        }
+        if (compareDataset?.records) {
+            compareChartB = buildCompareChart('compareChartB', compareChartB, flattenRecords(compareDataset.records), compareChartType);
+        }
+    }
+
+    function summarizeForComparison(records) {
+        const recs = records || [];
+        const sum = key => recs.reduce((acc, r) => acc + (r[key] != null ? Number(r[key]) || 0 : 0), 0);
+        const co2 = sum('co2_mass');
+        const so2 = sum('so2_mass');
+        const nox = sum('nox_mass');
+        const load = sum('gross_load');
+        const heat = sum('heat_input');
+        return {
+            records: recs.length,
+            co2,
+            so2,
+            nox,
+            load,
+            co2_intensity: load > 0 ? co2 / load : null,
+            heat_rate: load > 0 ? heat / load : null
+        };
+    }
+
+    function renderComparisonSummary() {
+        if (!currentDataset?.records || !compareDataset?.records) return;
+        const sumA = summarizeForComparison(currentDataset.records);
+        const sumB = summarizeForComparison(compareDataset.records);
+
+        document.getElementById('cmpColA').textContent = currentDatasetName;
+        document.getElementById('cmpColB').textContent = compareDatasetName;
+
+        const rows = [
+            { label: 'Record Count', a: sumA.records, b: sumB.records, dec: 0 },
+            { label: 'Total CO2 (tons)', a: sumA.co2, b: sumB.co2, dec: 1 },
+            { label: 'Total SO2 (tons)', a: sumA.so2, b: sumB.so2, dec: 1 },
+            { label: 'Total NOx (tons)', a: sumA.nox, b: sumB.nox, dec: 1 },
+            { label: 'Total Gross Load (MWh)', a: sumA.load, b: sumB.load, dec: 1 },
+            { label: 'CO2 Intensity (tons/MWh)', a: sumA.co2_intensity, b: sumB.co2_intensity, dec: 4 },
+            { label: 'Heat Rate (MMBtu/MWh)', a: sumA.heat_rate, b: sumB.heat_rate, dec: 4 }
+        ];
+
+        const fmtVal = (v, dec) => v != null ? v.toLocaleString(undefined, { maximumFractionDigits: dec }) : 'N/A';
+
+        lastCompareSummary = rows.map(r => {
+            const diff = (r.a != null && r.b != null) ? r.b - r.a : null;
+            const pct = (diff != null && r.a !== 0) ? (diff / r.a) * 100 : null;
+            return {
+                Indicator: r.label,
+                Dataset_A: r.a != null ? Number(r.a.toFixed(r.dec)) : 'N/A',
+                Dataset_B: r.b != null ? Number(r.b.toFixed(r.dec)) : 'N/A',
+                Absolute_Diff: diff != null ? Number(diff.toFixed(r.dec)) : 'N/A',
+                Percent_Diff: pct != null ? `${pct.toFixed(2)}%` : 'N/A'
+            };
+        });
+
+        document.getElementById('compareSummaryBody').innerHTML = rows.map(r => {
+            const diff = (r.a != null && r.b != null) ? r.b - r.a : null;
+            const pct = (diff != null && r.a !== 0) ? (diff / r.a) * 100 : null;
+            return `
+                <tr>
+                    <td>${r.label}</td>
+                    <td>${fmtVal(r.a, r.dec)}</td>
+                    <td>${fmtVal(r.b, r.dec)}</td>
+                    <td>${diff != null ? (diff >= 0 ? '+' : '') + fmtVal(diff, r.dec) : 'N/A'}</td>
+                    <td>${pct != null ? (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%' : 'N/A'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function generateAssistedComparison() {
+        const output = document.getElementById('assistedComparisonOutput');
+        if (!currentDataset?.records || !compareDataset?.records) {
+            output.innerHTML = '<p>Please select both datasets before generating a comparison.</p>';
+            return;
+        }
+
+        output.innerHTML = '<p>Generating AI-assisted comparison...</p>';
+        try {
+            const res = await fetch('/api/assisted-comparison', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    datasetA: { name: currentDatasetName, summary: summarizeForComparison(currentDataset.records) },
+                    datasetB: { name: compareDatasetName, summary: summarizeForComparison(compareDataset.records) }
+                })
+            });
+            const data = await res.json();
+            output.innerHTML = data.comparison || '<p>No comparison returned.</p>';
+        } catch (err) {
+            console.error(err);
+            output.innerHTML = '<p>Failed to generate AI comparison.</p>';
+        }
+    }
+
+    function exportComparisonCSV() {
+        if (!lastCompareSummary.length) return;
+        const metaLines = [
+            `# Analysis Date,${new Date().toISOString()}`,
+            `# Dataset A,"${currentDatasetName}"`,
+            `# Dataset B,"${compareDatasetName}"`,
+            `# Derived Indicators,"CO2 Intensity = CO2 Mass / Gross Load; Heat Rate = Heat Input / Gross Load"`,
+            ''
+        ];
+        const keys = Object.keys(lastCompareSummary[0]);
+        const csvRows = [
+            keys.join(','),
+            ...lastCompareSummary.map(r => keys.map(k => JSON.stringify(r[k] ?? '')).join(','))
+        ];
+        const blob = new Blob([[...metaLines, ...csvRows].join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `comparison_${currentDatasetName}_vs_${compareDatasetName}.csv`.replace(/\s+/g, '_');
+        link.click();
+    }
+
+    // ==============================================================================
+    // DESCRIPTIVE STATISTICS (Section 4.2)
+    // ==============================================================================
+    function renderDescriptiveStats() {
+        const tbody = document.getElementById('descriptiveStatsBody');
+        if (!tbody || !currentDataset || !currentDataset.records) return;
+
+        const metric = document.getElementById('statsMetricSelect')?.value || 'co2_mass';
+        const rawVals = currentDataset.records.map(rec => {
+            if (metric === 'co2_intensity') {
+                if (rec.co2_mass == null || rec.gross_load == null) return null;
+                const co2 = Number(rec.co2_mass), load = Number(rec.gross_load);
+                return (!isNaN(co2) && !isNaN(load) && load > 0) ? co2 / load : null;
+            }
+            if (metric === 'heat_rate') {
+                if (rec.heat_input == null || rec.gross_load == null) return null;
+                const heat = Number(rec.heat_input), load = Number(rec.gross_load);
+                return (!isNaN(heat) && !isNaN(load) && load > 0) ? heat / load : null;
+            }
+            return (rec[metric] != null && !isNaN(Number(rec[metric]))) ? Number(rec[metric]) : null;
+        });
+
+        const valid = rawVals.filter(v => v !== null && Number.isFinite(v)).sort((a, b) => a - b);
+        const missing = rawVals.length - valid.length;
+
+        if (valid.length === 0) {
+            tbody.innerHTML = `<tr><td>0</td><td>${missing}</td><td colspan="8">No valid numeric values</td></tr>`;
+            return;
+        }
+
+        const n = valid.length;
+        const mean = valid.reduce((a, b) => a + b, 0) / n;
+        const variance = valid.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / n;
+        const std = Math.sqrt(variance);
+        const pct = (p) => {
+            const idx = (n - 1) * p;
+            const lo = Math.floor(idx), hi = Math.ceil(idx);
+            return valid[lo] + (valid[hi] - valid[lo]) * (idx - lo);
+        };
+
+        const min = valid[0];
+        const q1 = pct(0.25);
+        const median = pct(0.5);
+        const q3 = pct(0.75);
+        const max = valid[n - 1];
+        const iqr = q3 - q1;
+
+        const dec = (metric === 'co2_intensity' || metric === 'heat_rate') ? 4 : 2;
+        const f = v => v.toLocaleString(undefined, { maximumFractionDigits: dec });
+
+        tbody.innerHTML = `
+            <tr>
+                <td>${n}</td>
+                <td>${missing}</td>
+                <td>${f(min)}</td>
+                <td>${f(q1)}</td>
+                <td>${f(median)}</td>
+                <td>${f(mean)}</td>
+                <td>${f(q3)}</td>
+                <td>${f(max)}</td>
+                <td>${f(std)}</td>
+                <td>${f(iqr)}</td>
+            </tr>
+        `;
     }
     </script>
 </body>

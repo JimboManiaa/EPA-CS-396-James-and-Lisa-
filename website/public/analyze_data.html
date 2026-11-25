@@ -127,6 +127,7 @@
                 <br>
                 <br>
                 <button type="button" class="ExploreBtn" onclick="loadEvaluation()">View Model Evaluation</button>
+                <button type="button" class="ExploreBtn" onclick="exportSensitivityCSV()" style="margin-top: 8px;">Export Sensitivity &amp; Scenario (CSV)</button>
             </div>
         </div>
 
@@ -167,6 +168,10 @@
 
     <!-- SEARCH Calculated Facility and Results -->
     <h2>Calculated Facility & Unit Impact Results</h2>
+
+        <div style="text-align: right; margin-bottom: 8px;">
+            <button type="button" onclick="exportImpactsCSV()" style="padding: 6px 12px; cursor: pointer;">Export TRACI Impacts (CSV)</button>
+        </div>
 
         <form role="search" id="search-form" onsubmit="return false;">
             <label for="site-search">Search impact results:</label>
@@ -226,6 +231,7 @@ const rowsPerPage = 50;
 
 // --- DASHBOARD & SENSITIVITY LOGIC ---
 let currentChartType = 'line';
+let lastSensitivityExport = null;
 
 function updateChartType(type) {
     currentChartType = type;
@@ -253,15 +259,35 @@ function populateFacilityDropdown() {
     });
 }
 
+function getActiveDashboardData() {
+    if (!currentImpactData || currentImpactData.length === 0) return { data: [], category: '', unit: '' };
+    const selectedCat = document.getElementById('categoryFilter').value;
+    const category = selectedCat || (
+        currentImpactData.some(d => d.impact_category === 'Global Warming')
+            ? 'Global Warming'
+            : currentImpactData[0].impact_category
+    );
+    const data = currentImpactData.filter(d => d.impact_category === category);
+    const unit = data.length > 0 ? data[0].impact_unit : '';
+    return { data, category, unit };
+}
+
 function renderDashboard() {
     if (!currentImpactData || currentImpactData.length === 0) {
         document.getElementById('plotlyChart').innerHTML = '';
         return;
     }
 
+    // Keep TRACI impact categories separate so different units are never summed together
+    const { data: dashData, category: activeCategory, unit: activeUnit } = getActiveDashboardData();
+    if (dashData.length === 0) {
+        document.getElementById('plotlyChart').innerHTML = '';
+        return;
+    }
+
     // 1. Rankings Generation
     const facilityImpacts = {};
-    currentImpactData.forEach(row => {
+    dashData.forEach(row => {
         facilityImpacts[row.facility_name] = (facilityImpacts[row.facility_name] || 0) + row.impact_score;
     });
     
@@ -269,7 +295,7 @@ function renderDashboard() {
     const rankList = document.getElementById('rankingsList');
     rankList.innerHTML = '';
     sortedFacilities.forEach(([fac, score]) => {
-        rankList.innerHTML += `<li><b>${fac}</b>: ${Number(score.toFixed(2)).toLocaleString()}</li>`;
+        rankList.innerHTML += `<li><b>${fac}</b>: ${Number(score.toFixed(2)).toLocaleString()} ${activeUnit}</li>`;
     });
 
     // 2. Chart Rendering via Plotly
@@ -277,14 +303,14 @@ function renderDashboard() {
 
     if (currentChartType === 'line') {
         const yearImpacts = {};
-        currentImpactData.forEach(row => {
+        dashData.forEach(row => {
             yearImpacts[row.reporting_year] = (yearImpacts[row.reporting_year] || 0) + row.impact_score;
         });
         const years = Object.keys(yearImpacts).sort();
         const scores = years.map(y => yearImpacts[y]);
 
-        const trace = { x: years, y: scores, type: 'scatter', mode: 'lines+markers', name: 'Total Impact', line: {color: '#007bff'} };
-        const layout = { title: 'Impact Trend Analysis', xaxis: {title: 'Reporting Year'}, yaxis: {title: 'Total Impact Score'}, margin: {t: 40} };
+        const trace = { x: years, y: scores, type: 'scatter', mode: 'lines+markers', name: activeCategory, line: {color: '#007bff'} };
+        const layout = { title: `${activeCategory} Trend Analysis`, xaxis: {title: 'Reporting Year'}, yaxis: {title: `Total Impact (${activeUnit})`}, margin: {t: 40} };
         Plotly.newPlot(chartDiv, [trace], layout);
 
     } else if (currentChartType === 'bar') {
@@ -292,7 +318,7 @@ function renderDashboard() {
         const scores = sortedFacilities.map(f => f[1]).slice(0, 10);
 
         const trace = { x: facs, y: scores, type: 'bar', marker: {color: '#28a745'} };
-        const layout = { title: 'Top 10 Facilities by Total Impact', xaxis: {title: 'Facility', tickangle: -45}, yaxis: {title: 'Total Impact Score'}, margin: {b: 100, t: 40} };
+        const layout = { title: `Top 10 Facilities: ${activeCategory}`, xaxis: {title: 'Facility', tickangle: -45}, yaxis: {title: `Total Impact (${activeUnit})`}, margin: {b: 100, t: 40} };
         Plotly.newPlot(chartDiv, [trace], layout);
 
     } else if (currentChartType === 'sensitivity' || currentChartType === 'scenario') {
@@ -305,10 +331,10 @@ function renderDashboard() {
         if (Math.abs(loadChangePct) > 25) warningEl.style.display = 'block';
         else warningEl.style.display = 'none';
 
-        const facData = currentImpactData.filter(d => d.facility_name === facName);
+        const facData = dashData.filter(d => d.facility_name === facName);
         
         let baseLoad = 0; let baseImpact = 0;
-        facData.forEach(d => { baseLoad += d.gross_load_mwh; baseImpact += d.impact_score; });
+        facData.forEach(d => { baseLoad += (d.gross_load_mwh || 0); baseImpact += d.impact_score; });
 
         // 1. Linear Model (Deterministic Baseline)
         const intensity = baseLoad > 0 ? baseImpact / baseLoad : 0;
@@ -334,6 +360,21 @@ function renderDashboard() {
         
         const treeScenarioImpact = getTreeImpact(scenarioLoad, baseLoad, baseImpact);
         const treePctChange = baseImpact > 0 ? ((treeScenarioImpact - baseImpact) / baseImpact * 100).toFixed(2) : 0;
+
+        // Store latest scenario results for CSV export
+        lastSensitivityExport = {
+            facility: facName,
+            impactCategory: activeCategory,
+            unit: activeUnit,
+            loadChangePct,
+            baseLoad,
+            scenarioLoad,
+            baseImpact,
+            linearScenarioImpact,
+            linearPctChange,
+            treeScenarioImpact,
+            treePctChange
+        };
 
         if (currentChartType === 'sensitivity') {
             const curveX = []; const linearCurveY = []; const treeCurveY = [];
@@ -364,11 +405,15 @@ function renderDashboard() {
             };
 
             const layout = {
-                title: `Sensitivity Curves: Linear vs. Tree (${facName})`,
+                title: `Sensitivity Curves (${activeCategory}): Linear vs. Tree (${facName})`,
                 xaxis: {title: 'Gross Load (MWh)'},
-                yaxis: {title: 'Predicted Impact Score'},
+                yaxis: {title: `Predicted Impact (${activeUnit})`},
                 margin: {t: 50},
                 shapes: [
+                    // Shaded out-of-training-range regions (< -25% and > +25%)
+                    {type: 'rect', xref: 'x', yref: 'paper', x0: baseLoad * 0.5, x1: baseLoad * 0.75, y0: 0, y1: 1, fillcolor: 'rgba(220, 53, 69, 0.12)', line: {width: 0}},
+                    {type: 'rect', xref: 'x', yref: 'paper', x0: baseLoad * 1.25, x1: baseLoad * 1.5, y0: 0, y1: 1, fillcolor: 'rgba(220, 53, 69, 0.12)', line: {width: 0}},
+                    // Baseline reference lines
                     {type: 'line', x0: baseLoad, x1: baseLoad, y0: 0, y1: baseImpact, line: {dash: 'dot', color: 'gray'}},
                     {type: 'line', x0: 0, x1: baseLoad, y0: baseImpact, y1: baseImpact, line: {dash: 'dot', color: 'gray'}}
                 ]
@@ -390,8 +435,8 @@ function renderDashboard() {
             };
 
             const layout = {
-                title: `Model Scenario Comparison: ${facName}`,
-                yaxis: {title: 'Total Predicted Impact Score'},
+                title: `Model Scenario Comparison (${activeCategory}): ${facName}`,
+                yaxis: {title: `Total Predicted Impact (${activeUnit})`},
                 margin: {t: 70}
             };
             Plotly.newPlot(chartDiv, [trace], layout);
@@ -566,6 +611,79 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPaginatedImpacts();
     });
 });
+
+// --- REAL CHRONOLOGICAL MODEL EVALUATION (Mean Baseline vs. OLS Linear vs. Decision Tree) ---
+function computeRealModelMetrics(records) {
+    const valid = (records || []).filter(r => r.gross_load_mwh > 0 && r.impact_score != null);
+    if (valid.length < 3) return null;
+
+    // Chronological split: earlier years = train, latest year = test (fallback 80/20 if single year)
+    const years = [...new Set(valid.map(r => r.reporting_year))].sort((a, b) => a - b);
+    let train, test, splitLabel;
+    if (years.length >= 2) {
+        const testYear = years[years.length - 1];
+        train = valid.filter(r => r.reporting_year < testYear);
+        test = valid.filter(r => r.reporting_year === testYear);
+        splitLabel = `Chronological (Train: ${years[0]}–${years[years.length - 2]}, Test: ${testYear})`;
+    } else {
+        const cut = Math.max(1, Math.floor(valid.length * 0.8));
+        train = valid.slice(0, cut);
+        test = valid.slice(cut);
+        splitLabel = `Single-Year 80/20 Split (Year ${years[0]})`;
+    }
+    if (train.length === 0 || test.length === 0) return null;
+
+    // 1. Mean Baseline
+    const meanY = train.reduce((s, r) => s + r.impact_score, 0) / train.length;
+    const predictBaseline = () => meanY;
+
+    // 2. OLS Linear Regression (y = m*x + b)
+    const meanX = train.reduce((s, r) => s + r.gross_load_mwh, 0) / train.length;
+    let num = 0, den = 0;
+    train.forEach(r => {
+        num += (r.gross_load_mwh - meanX) * (r.impact_score - meanY);
+        den += (r.gross_load_mwh - meanX) ** 2;
+    });
+    const slope = den !== 0 ? num / den : 0;
+    const intercept = meanY - slope * meanX;
+    const predictLinear = (x) => slope * x + intercept;
+
+    // 3. Binned Decision Tree Regressor (3 load-level splits)
+    const sortedX = train.map(r => r.gross_load_mwh).sort((a, b) => a - b);
+    const t1 = sortedX[Math.floor(sortedX.length / 3)];
+    const t2 = sortedX[Math.floor((2 * sortedX.length) / 3)];
+    const binMean = (arr) => arr.length ? arr.reduce((s, r) => s + r.impact_score, 0) / arr.length : meanY;
+    const mLow = binMean(train.filter(r => r.gross_load_mwh <= t1));
+    const mMid = binMean(train.filter(r => r.gross_load_mwh > t1 && r.gross_load_mwh <= t2));
+    const mHigh = binMean(train.filter(r => r.gross_load_mwh > t2));
+    const predictTree = (x) => (x <= t1 ? mLow : x <= t2 ? mMid : mHigh);
+
+    const evalModel = (fn) => {
+        const testMeanY = test.reduce((s, r) => s + r.impact_score, 0) / test.length;
+        let absErr = 0, sqErr = 0, ssTot = 0;
+        test.forEach(r => {
+            const pred = fn(r.gross_load_mwh);
+            const err = r.impact_score - pred;
+            absErr += Math.abs(err);
+            sqErr += err ** 2;
+            ssTot += (r.impact_score - testMeanY) ** 2;
+        });
+        const mae = absErr / test.length;
+        const rmse = Math.sqrt(sqErr / test.length);
+        const r2 = ssTot !== 0 ? 1 - (sqErr / ssTot) : 0;
+        return { mae, rmse, r2 };
+    };
+
+    return {
+        splitLabel,
+        trainCount: train.length,
+        testCount: test.length,
+        baseline: evalModel(predictBaseline),
+        linear: evalModel(predictLinear),
+        tree: evalModel(predictTree)
+    };
+}
+
 // --- DYNAMIC AI EVALUATION LOGIC ---
 async function loadEvaluation() {
     const modal = document.getElementById('evalModal');
@@ -576,19 +694,40 @@ async function loadEvaluation() {
     const loadChangePct = document.getElementById('loadChange').value || '0';
     
     // Grab the current year and impact category filters
-    const impactCategory = document.getElementById('categoryFilter').value || 'All Impact Categories';
+    const { data: dashData, category: activeCategory, unit: activeUnit } = getActiveDashboardData();
     const year = document.getElementById('yearFilter').value || 'All Years';
     
     // Open the modal immediately
     modal.style.display = 'flex';
-    modalBody.innerHTML = '<p style="text-align: center; color: #555;"><i>Generating facility-specific AI evaluation via Groq...</i></p>';
+    modalBody.innerHTML = '<p style="text-align: center; color: #555;"><i>Computing real model metrics &amp; generating facility-specific AI evaluation via Groq...</i></p>';
+
+    const metrics = computeRealModelMetrics(dashData);
+    let metricsHtml = '';
+    if (metrics) {
+        const fmt = (v, d = 2) => Number(v.toFixed(d)).toLocaleString();
+        metricsHtml = `
+            <h3>Computed Model Evaluation (${activeCategory})</h3>
+            <p><b>Split:</b> ${metrics.splitLabel} (Train n=${metrics.trainCount}, Test n=${metrics.testCount})</p>
+            <table class="db_table" style="margin-bottom: 15px;">
+                <thead>
+                    <tr><th>Model</th><th>MAE (${activeUnit})</th><th>RMSE (${activeUnit})</th><th>R²</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Mean Baseline</td><td>${fmt(metrics.baseline.mae)}</td><td>${fmt(metrics.baseline.rmse)}</td><td>${metrics.baseline.r2.toFixed(4)}</td></tr>
+                    <tr><td>Linear Regression (OLS)</td><td>${fmt(metrics.linear.mae)}</td><td>${fmt(metrics.linear.rmse)}</td><td>${metrics.linear.r2.toFixed(4)}</td></tr>
+                    <tr><td>Decision Tree (3-Bin)</td><td>${fmt(metrics.tree.mae)}</td><td>${fmt(metrics.tree.rmse)}</td><td>${metrics.tree.r2.toFixed(4)}</td></tr>
+                </tbody>
+            </table>
+            <hr>
+        `;
+    }
 
     try {
         // Pass all parameters securely to the backend
         const query = new URLSearchParams({
             facility: facName,
             loadChange: loadChangePct,
-            impactCategory: impactCategory,
+            impactCategory: activeCategory,
             year: year
         });
         
@@ -596,14 +735,59 @@ async function loadEvaluation() {
         const data = await res.json();
         
         if (data.evaluation) {
-            modalBody.innerHTML = data.evaluation;
+            modalBody.innerHTML = metricsHtml + data.evaluation;
         } else {
-            modalBody.innerHTML = '<p style="color: #dc3545;">Failed to load evaluation from Groq.</p>';
+            modalBody.innerHTML = metricsHtml + '<p style="color: #dc3545;">Failed to load evaluation from Groq.</p>';
         }
     } catch (error) {
         console.error("Error fetching AI evaluation:", error);
-        modalBody.innerHTML = '<p style="color: #dc3545;">Error connecting to the AI service.</p>';
+        modalBody.innerHTML = metricsHtml + '<p style="color: #dc3545;">Error connecting to the AI service.</p>';
     }
+}
+
+// --- EXPORTS WITH REPRODUCIBILITY METADATA (Section 7) ---
+function exportImpactsCSV() {
+    if (!currentImpactData || currentImpactData.length === 0) return;
+    const category = document.getElementById('categoryFilter').value || 'All Impact Categories';
+    const year = document.getElementById('yearFilter').value || 'All Years';
+    const meta = [
+        `# Analysis Date,${new Date().toISOString()}`,
+        `# Source,"EPA CAMPD + TRACI 2.2 (1 short ton = 907.18474 kg)"`,
+        `# Filters,"Impact Category=${category}; Year=${year}"`,
+        `# Derived Indicators,"Impact Score = Mass_kg * CF; Impact Intensity = Impact Score / Gross Load (MWh)"`,
+        ''
+    ];
+    const keys = Object.keys(currentImpactData[0]);
+    const rows = [keys.join(','), ...currentImpactData.map(r => keys.map(k => JSON.stringify(r[k] ?? '')).join(','))];
+    const blob = new Blob([[...meta, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `traci_impacts_${category.replace(/\s+/g, '_')}.csv`;
+    link.click();
+}
+
+function exportSensitivityCSV() {
+    if (!lastSensitivityExport) return;
+    const s = lastSensitivityExport;
+    const meta = [
+        `# Analysis Date,${new Date().toISOString()}`,
+        `# Facility,"${s.facility}"`,
+        `# Impact Category,"${s.impactCategory} (${s.unit})"`,
+        `# Scenario,"Gross Load Change = ${s.loadChangePct}%"`,
+        `# Note,"Model-response visualization only; does not prove real-world causation."`,
+        ''
+    ];
+    const rows = [
+        'Scenario,Gross_Load_MWh,Predicted_Impact,Absolute_Change,Percent_Change',
+        `Baseline,${s.baseLoad.toFixed(2)},${s.baseImpact.toFixed(2)},0,0%`,
+        `Linear Model (${s.loadChangePct}%),${s.scenarioLoad.toFixed(2)},${s.linearScenarioImpact.toFixed(2)},${(s.linearScenarioImpact - s.baseImpact).toFixed(2)},${s.linearPctChange}%`,
+        `Tree Model (${s.loadChangePct}%),${s.scenarioLoad.toFixed(2)},${s.treeScenarioImpact.toFixed(2)},${(s.treeScenarioImpact - s.baseImpact).toFixed(2)},${s.treePctChange}%`
+    ];
+    const blob = new Blob([[...meta, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `sensitivity_${s.facility.replace(/\s+/g, '_')}_${s.loadChangePct}pct.csv`;
+    link.click();
 }
 </script>
 

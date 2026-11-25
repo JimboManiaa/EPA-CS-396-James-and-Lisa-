@@ -117,22 +117,30 @@
                     <hr style="width: 150px;margin-left: 0; margin-right: auto;">
                     <br>
 
+                    <!-- State Filter (Rubric Section 4.1) -->
+                    <label for="state_select">State:</label><br>
+                    <select id="state_select" name="state">
+                        <option value="">Select a state</option>
+                    </select>
+                    <hr style="width: 150px;margin-left: 0; margin-right: auto;">
+                    <br>
+
                     <!-- Operating Time Slider -->
                     <label for="op_time_slider">Operating Time:</label><br>
                     <div class="range_container">
                         <div class="sliders_control">
-                            <input id="fromSlider_opTime" type="range" value="0" min="0" max="100"/>
-                            <input id="toSlider_opTime" type="range" value="100" min="0" max="100"/>
+                            <input id="fromSlider_opTime" type="range" value="0" min="0" max="8784"/>
+                            <input id="toSlider_opTime" type="range" value="8784" min="0" max="8784"/>
                         </div>
 
                         <div class="form_control">
                             <div class="form_control_container">
                                 <div class="form_control_container__time">Min:</div>
-                                <input class="form_control_container__time__input" type="number" id="fromInput_opTime" value="0" min="0" max="100"/>
+                                <input class="form_control_container__time__input" type="number" id="fromInput_opTime" value="0" min="0" max="8784"/>
                             </div>
                             <div class="form_control_container">
                                 <div class="form_control_container__time">Max:</div>
-                                <input class="form_control_container__time__input" type="number" id="toInput_opTime" value="100" min="0" max="100"/>
+                                <input class="form_control_container__time__input" type="number" id="toInput_opTime" value="8784" min="0" max="8784"/>
                             </div>
                         </div>
                     </div>
@@ -166,6 +174,14 @@
                 <!-- Column 3 -->
                 <!-- RIGHT COLUMN ===========================================-->    
                 <div class="filt_col">
+
+                    <!-- Control Technology Filter (Rubric Section 4.1) -->
+                    <label for="control_tech_select">Control Technology:</label><br>
+                    <select id="control_tech_select" name="control_tech">
+                        <option value="">Select a control technology</option>
+                    </select>
+                    <hr style="width: 150px;margin-left: 0; margin-right: auto;">
+                    <br>
 
                     <!-- CO2 Mass Slider -->
                     <label for="co2_slider">CO2 Mass (short tons):</label><br>
@@ -273,13 +289,7 @@
     <br>
 
     <!-- Datasets Section ----------------------------------------->
-    
-    <!-- Filtered Download Button -->
-    <div style="text-align: right; margin-bottom: 10px; margin-right: 20px;">
-        <button type="button" id="download-filtered-btn" class="btn" style="padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            Download Filtered Data (CSV)
-        </button>
-    </div>
+
 
     <div class="db_holder">
         <table class="db_table">
@@ -298,6 +308,17 @@
         </span>
         <button id="nextPageBtn" class="btn" style="margin-left: 10px;">Next</button>
     </div>
+    <!-- Analytical Dataset Summary & Missing-Value Banner (Rubric Section 4.1) -->
+    <div id="dataset-summary-banner" class="info_content" style="margin-bottom: 12px; font-size: 0.92rem;">
+        <strong>Analytical Dataset Summary:</strong> Loading...
+    </div>
+    
+    <!-- Filtered Download Button -->
+    <div style="text-align: right; margin-bottom: 10px; margin-right: 20px;">
+        <button type="button" id="download-filtered-btn" class="btn" style="padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Download Filtered Data (CSV)
+        </button>
+    </div>
 
     </div>
 
@@ -311,14 +332,8 @@
             document.getElementById("p_fuel").value = "";
             document.getElementById("s_fuel").value = "";
             document.getElementById("program_code_select").value = "";
-
-            // Reset the static slider
-            if (document.getElementById("fromSlider_opTime")) {
-                document.getElementById("fromSlider_opTime").value = 0;
-                document.getElementById("fromInput_opTime").value = 0;
-                document.getElementById("toSlider_opTime").value = 100;
-                document.getElementById("toInput_opTime").value = 100;
-            }
+            if (document.getElementById("state_select")) document.getElementById("state_select").value = "";
+            if (document.getElementById("control_tech_select")) document.getElementById("control_tech_select").value = "";
 
             // reset other sliders
             await initializeSliders();
@@ -326,6 +341,9 @@
             // clear search
             const searchInput = document.getElementById("site-search");
             if (searchInput) searchInput.value = "";
+
+            // Clear URL parameters
+            window.history.replaceState({}, '', window.location.pathname);
 
             currentPage = 1;
             loadDatabaseTable();
@@ -374,6 +392,7 @@
                         renderSortedData();
                     } else {
                         document.getElementById("pagination-controls").style.display = "none";
+                        updateDatasetSummary([]);
                         tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No matching records found via AI search.</td></tr>`;
                     }
                 } catch (error) {
@@ -457,6 +476,8 @@
             populateSelect('p_fuel', data.primaryFuels);
             populateSelect('s_fuel', data.secondaryFuels);
             populateSelect('program_code_select', data.programCodes);
+            populateSelect('state_select', data.states);
+            populateSelect('control_tech_select', data.controlTechs);
         } catch (e) {
             console.error("Error populating dropdowns:", e);
         }
@@ -471,6 +492,61 @@
             opt.textContent = item;
             el.appendChild(opt);
         });
+    }
+
+    // Restore reproducible filters from URL parameters (Rubric Section 4.1)
+    function loadFiltersFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const setVal = (id, key) => {
+            if (urlParams.has(key) && document.getElementById(id)) {
+                document.getElementById(id).value = urlParams.get(key);
+            }
+        };
+        setVal('start', 'startDate');
+        setVal('end', 'endDate');
+        setVal('facility_name_select', 'facilityName');
+        setVal('db_id_select', 'dbId');
+        setVal('p_fuel', 'primaryFuel');
+        setVal('s_fuel', 'secondaryFuel');
+        setVal('program_code_select', 'programCode');
+        setVal('state_select', 'state');
+        setVal('control_tech_select', 'controlTech');
+        setVal('fromInput_opTime', 'minOpTime');
+        setVal('fromSlider_opTime', 'minOpTime');
+        setVal('toInput_opTime', 'maxOpTime');
+        setVal('toSlider_opTime', 'maxOpTime');
+        setVal('fromInput_grossLoad', 'minGrossLoad');
+        setVal('fromSlider_grossLoad', 'minGrossLoad');
+        setVal('toInput_grossLoad', 'maxGrossLoad');
+        setVal('toSlider_grossLoad', 'maxGrossLoad');
+    }
+
+    // Update Analytical Dataset Summary & Missing-Value Banner (Rubric Section 4.1)
+    function updateDatasetSummary(rows) {
+        const banner = document.getElementById('dataset-summary-banner');
+        if (!banner) return;
+        if (!rows || rows.length === 0) {
+            banner.innerHTML = '<strong>Analytical Dataset Summary:</strong> 0 records selected.';
+            return;
+        }
+        const facilities = new Set(rows.map(r => r['Facility Name']).filter(Boolean));
+        const units = new Set(rows.map(r => `${r['EPA ID']}_${r['Unit ID']}`));
+        const years = [...new Set(rows.map(r => r['Reporting Year']).filter(Boolean))].sort();
+        const isMissing = v => v === null || v === undefined || v === '' || v === 'N/A';
+        const missLoad = rows.filter(r => isMissing(r['Gross Load (MWh)'])).length;
+        const missCO2 = rows.filter(r => isMissing(r['CO2 (tons)'])).length;
+        const missNOx = rows.filter(r => isMissing(r['NOx (tons)'])).length;
+        const missSO2 = rows.filter(r => isMissing(r['SO2 (tons)'])).length;
+
+        banner.innerHTML = `
+            <strong>Analytical Dataset Summary:</strong>
+            ${rows.length.toLocaleString()} records |
+            ${facilities.size.toLocaleString()} facilities |
+            ${units.size.toLocaleString()} units |
+            ${years.length} reporting year(s) (${years.length ? years[0] + (years.length > 1 ? '–' + years[years.length - 1] : '') : 'N/A'})
+            <br>
+            <strong>Missing Values:</strong> Gross Load: ${missLoad} | CO2: ${missCO2} | NOx: ${missNOx} | SO2: ${missSO2}
+        `;
     }
 
     // Main fetch & render function
@@ -495,6 +571,8 @@
         const pFuel = document.getElementById("p_fuel").value;
         const sFuel = document.getElementById("s_fuel").value;
         const progCode = document.getElementById("program_code_select").value;
+        const stateVal = document.getElementById("state_select")?.value;
+        const controlTech = document.getElementById("control_tech_select")?.value;
 
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
@@ -503,8 +581,15 @@
         if (pFuel) params.append('primaryFuel', pFuel);
         if (sFuel) params.append('secondaryFuel', sFuel);
         if (progCode) params.append('programCode', progCode);
+        if (stateVal) params.append('state', stateVal);
+        if (controlTech) params.append('controlTech', controlTech);
 
         // Sliders 
+        const opMin = document.getElementById("fromInput_opTime")?.value;
+        const opMax = document.getElementById("toInput_opTime")?.value;
+        if (opMin && Number(opMin) > 0) params.append('minOpTime', opMin);
+        if (opMax) params.append('maxOpTime', opMax);
+
         const grossMin = document.getElementById("fromInput_grossLoad")?.value;
         const grossMax = document.getElementById("toInput_grossLoad")?.value;
         if (grossMin && Number(grossMin) > 0) params.append('minGrossLoad', grossMin);
@@ -525,8 +610,12 @@
         if (so2Min && Number(so2Min) > 0) params.append('minSO2', so2Min);
         if (so2Max) params.append('maxSO2', so2Max);
 
+        // Sync active filters to URL for reproducibility (Rubric Section 4.1)
+        const queryString = params.toString();
+        window.history.replaceState({}, '', queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname);
+
         try {
-            const response = await fetch(`/api/retrieval-data?${params.toString()}`);
+            const response = await fetch(`/api/retrieval-data?${queryString}`);
             if (!response.ok) throw new Error('Failed to fetch data from server');
             
             currentData = await response.json();
@@ -535,6 +624,7 @@
 
             if (currentData.length === 0) {
                 document.getElementById("pagination-controls").style.display = "none";
+                updateDatasetSummary([]);
                 tableBody.innerHTML = `<tr><td colspan="5" class="text-center">No matching records found.</td></tr>`;
                 return;
             }
@@ -615,6 +705,7 @@
     function renderSortedData() {
         if (!currentData || currentData.length === 0) {
             document.getElementById("pagination-controls").style.display = "none";
+            updateDatasetSummary([]);
             return;
         }
         
@@ -636,6 +727,9 @@
                 return terms.every(term => rowText.includes(term));
             });
         }
+
+        // Update analytical summary banner for current filtered set
+        updateDatasetSummary(dataToRender);
 
         // Apply sort
         if (sortOrder !== 'none' && sortCol) {
@@ -716,6 +810,7 @@
             tInput.value = maxVal;
         };
 
+        setRangeBounds('fromSlider_opTime', 'toSlider_opTime', 'fromInput_opTime', 'toInput_opTime', ranges.maxOpTime || 8784);
         setRangeBounds('fromSlider_grossLoad', 'toSlider_grossLoad', 'fromInput_grossLoad', 'toInput_grossLoad', ranges.maxGross);
         setRangeBounds('fromSlider_co2', 'toSlider_co2', 'fromInput_co2', 'toInput_co2', ranges.maxCO2);
         setRangeBounds('fromSlider_nox', 'toSlider_nox', 'fromInput_nox', 'toInput_nox', ranges.maxNOx);
@@ -727,15 +822,17 @@
 }
     // Attach listeners on load
     document.addEventListener("DOMContentLoaded", async () => {
-        loadFilterDropdowns();
+        await loadFilterDropdowns();
         await initializeSliders(); 
+        loadFiltersFromURL();
         loadDatabaseTable();
 
         // Attach reload on input changes
         const changeElements = [
             'start', 'end', 
             'facility_name_select', 'db_id_select', 
-            'p_fuel', 's_fuel', 'program_code_select'
+            'p_fuel', 's_fuel', 'program_code_select',
+            'state_select', 'control_tech_select'
         ];
         changeElements.forEach(id => {
             const el = document.getElementById(id);
@@ -854,9 +951,17 @@
                 });
             }
 
-            // convert to csv
+            // convert to csv with reproducibility metadata (Rubric Section 7)
             const columns = Object.keys(dataToDownload[0]);
-            let csvContent = columns.join(",") + "\n"; // Headers
+            const metaLines = [
+                `# Analysis Date,${new Date().toISOString()}`,
+                `# Source,"EPA CAMPD Manager - Filtered Analytical Dataset"`,
+                `# Active Filters,"${window.location.search || 'None'}"`,
+                `# Search Query,"${query || 'None'}"`,
+                `# Exported Records,${dataToDownload.length}`,
+                ""
+            ];
+            let csvContent = metaLines.join("\n") + columns.join(",") + "\n"; // Headers
 
             dataToDownload.forEach(row => {
                 let rowArray = columns.map(col => {

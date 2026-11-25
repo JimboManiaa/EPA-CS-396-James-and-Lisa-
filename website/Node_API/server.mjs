@@ -46,16 +46,18 @@ app.get('/explore.html', (req, res) => res.sendFile(path.join(publicPath, 'explo
 app.get('/api/filter-options', async (req, res) => {
   try {
     const facilities = await Facility.findAll({
-      attributes: ['epa_facility_id', 'facility_name'],
+      attributes: ['epa_facility_id', 'facility_name', 'state'],
       raw: true
     });
 
     const facilityNames = [...new Set(facilities.map(f => f.facility_name).filter(Boolean))].sort();
     const databaseIds = [...new Set(facilities.map(f => f.epa_facility_id).filter(Boolean))].sort();
+    const states = [...new Set(facilities.map(f => f.state).filter(Boolean))].sort();
 
     let primaryFuels = [];
     let secondaryFuels = [];
     let programCodes = [];
+    let controlTechs = [];
 
     try {
       const units = await Unit.findAll({ raw: true });
@@ -66,12 +68,30 @@ app.get('/api/filter-options', async (req, res) => {
       console.warn("Could not query Unit for filters:", e.message);
     }
 
+    try {
+      const records = await AnnualRecord.findAll({
+        attributes: ['so2_control', 'nox_control', 'pm_control'],
+        raw: true
+      });
+      const techSet = new Set();
+      records.forEach(r => {
+        if (r.so2_control) techSet.add(r.so2_control);
+        if (r.nox_control) techSet.add(r.nox_control);
+        if (r.pm_control) techSet.add(r.pm_control);
+      });
+      controlTechs = [...techSet].sort();
+    } catch (e) {
+      console.warn("Could not query AnnualRecord for control technologies:", e.message);
+    }
+
     res.json({
       facilityNames,
       databaseIds,
       primaryFuels,
       secondaryFuels,
-      programCodes
+      programCodes,
+      states,
+      controlTechs
     });
   } catch (error) {
     console.error("Failed to load filter options:", error);
@@ -145,6 +165,7 @@ app.get('/api/metric-ranges', async (req, res) => {
   try {
     const maxRecord = await AnnualRecord.findOne({
       attributes: [
+        [sequelize.fn('MAX', sequelize.col('operating_time')), 'maxOpTime'],
         [sequelize.fn('MAX', sequelize.col('gross_load')), 'maxGross'],
         [sequelize.fn('MAX', sequelize.col('co2_mass')), 'maxCO2'],
         [sequelize.fn('MAX', sequelize.col('nox_mass')), 'maxNOx'],
@@ -154,6 +175,7 @@ app.get('/api/metric-ranges', async (req, res) => {
     });
 
     res.json({
+      maxOpTime: Math.ceil(maxRecord?.maxOpTime || 8784),
       maxGross: Math.ceil(maxRecord?.maxGross || 1000000),
       maxCO2: Math.ceil(maxRecord?.maxCO2 || 1000000),
       maxNOx: Math.ceil(maxRecord?.maxNOx || 50000),
@@ -171,6 +193,8 @@ app.get('/api/retrieval-data', async (req, res) => {
     const { 
       startDate, endDate, facilityName, dbId, 
       primaryFuel, secondaryFuel, programCode,
+      state, controlTech,
+      minOpTime, maxOpTime,
       minGrossLoad, maxGrossLoad,
       minCO2, maxCO2,
       minNOx, maxNOx,
@@ -180,6 +204,7 @@ app.get('/api/retrieval-data', async (req, res) => {
     const facilityWhere = {};
     if (facilityName) facilityWhere.facility_name = facilityName;
     if (dbId) facilityWhere.epa_facility_id = dbId;
+    if (state) facilityWhere.state = state;
 
     const unitWhere = {};
     if (programCode) unitWhere.unit_type = programCode;
@@ -192,6 +217,19 @@ app.get('/api/retrieval-data', async (req, res) => {
       if (startDate) emissionsWhere.reporting_year[Op.gte] = parseInt(startDate.split('-')[0]);
       if (endDate) emissionsWhere.reporting_year[Op.lte] = parseInt(endDate.split('-')[0]);
     }
+
+    if (controlTech) {
+      emissionsWhere[Op.or] = [
+        { so2_control: controlTech },
+        { nox_control: controlTech },
+        { pm_control: controlTech }
+      ];
+    }
+
+    const minOp = parseFloat(minOpTime);
+    const maxOp = parseFloat(maxOpTime);
+    if (!isNaN(minOp) && minOp > 0) emissionsWhere.operating_time = { ...(emissionsWhere.operating_time || {}), [Op.gte]: minOp };
+    if (!isNaN(maxOp)) emissionsWhere.operating_time = { ...(emissionsWhere.operating_time || {}), [Op.lte]: maxOp };
 
     const minGross = parseFloat(minGrossLoad);
     const maxGross = parseFloat(maxGrossLoad);
@@ -213,7 +251,7 @@ app.get('/api/retrieval-data', async (req, res) => {
     if (!isNaN(minS) && minS > 0) emissionsWhere.so2_mass = { ...(emissionsWhere.so2_mass || {}), [Op.gte]: minS };
     if (!isNaN(maxS)) emissionsWhere.so2_mass = { ...(emissionsWhere.so2_mass || {}), [Op.lte]: maxS };
 
-    const hasEmissionFilter = Object.keys(emissionsWhere).length > 0;
+    const hasEmissionFilter = Object.keys(emissionsWhere).length > 0 || Boolean(emissionsWhere[Op.or]);
     const hasUnitFilter = Object.keys(unitWhere).length > 0;
 
     const includeArr = [
@@ -843,6 +881,43 @@ app.get('/api/evaluate-model', async (req, res) => {
     } catch (error) {
         console.error("Model evaluation failed:", error);
         res.status(500).json({ error: "Failed to generate evaluation" });
+    }
+});
+// API Route for AI Assisted Dataset Comparison (Explore Page)
+app.post('/api/assisted-comparison', async (req, res) => {
+    try {
+        const { datasetA, datasetB } = req.body;
+        if (!datasetA || !datasetB) {
+            return res.status(400).json({ error: "Both datasets are required for comparison." });
+        }
+
+        const response = await groq.chat.completions.create({
+            messages: [
+                {
+                    role: "system",
+                    content: `You are an environmental data analyst comparing two EPA CAMPD power-sector datasets.
+                  Format your response in clean HTML using only <h4>, <p>, <ul>, <li>, and <b> tags. Do not use markdown backticks.
+                  Explain key differences, normalized intensity comparisons, assumptions, limitations, and conclusions in plain language.`
+                                  },
+                                  {
+                                      role: "user",
+                                      content: `Compare these two datasets:
+                  Dataset A (${datasetA.name}): ${JSON.stringify(datasetA.summary)}
+                  Dataset B (${datasetB.name}): ${JSON.stringify(datasetB.summary)}
+
+                  Provide:
+                  1. Key Emissions & Load Differences (absolute and percentage)
+                  2. Normalized Efficiency Comparison (CO2 Intensity & Heat Rate)
+                  3. Assumptions, Limitations, and Plain-Language Conclusion`
+                }
+            ],
+            model: "openai/gpt-oss-120b"
+        });
+
+        res.json({ comparison: response.choices[0].message.content });
+    } catch (error) {
+        console.error("Assisted comparison failed:", error);
+        res.status(500).json({ error: "Failed to generate comparison." });
     }
 });
 // 8. Start server and verify database connection
