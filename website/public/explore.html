@@ -573,8 +573,6 @@
     // 2. Render bar chart functionality -------------------------------
 
     // can compare states, fuels, facilities, units, or control technologies
-
-
     function renderBarChart(records) {
         const ctx = document.getElementById('datasetChart').getContext('2d');
         const groupFields = ['state', 'primary_fuel', 'facility', 'epa_unit_id'];
@@ -593,8 +591,8 @@
                 datasets: [{
                     label: `Total CO2 Emissions by ${activeGroupField.replace('_', ' ').toUpperCase()}`,
                     data: Object.values(aggregatedData),
-                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: '#97D3EA',
+                    borderColor: '#97D3EA',
                     borderWidth: 1
                 }]
             },
@@ -649,8 +647,8 @@
                 datasets: [{
                     label: 'CO2 Emissions Distribution (Frequency)',
                     data: bins,
-                    backgroundColor: 'rgba(255, 159, 64, 0.6)',
-                    borderColor: 'rgb(255, 159, 64)',
+                    backgroundColor: '#28a745',
+                    borderColor: '#28a745',
                     borderWidth: 1,
                     barPercentage: 1,
                     categoryPercentage: 1
