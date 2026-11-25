@@ -57,7 +57,26 @@
         <!-- Visualizer =========================================================== -->
         <div class="info_content">
             <h3 id="selectedDatasetName">Dataset Name</h3>
+            <!-- Bar Chart Controls (only visible when Bar Chart is active) -->
+            <div id="barChartControls" style="display: none; gap: 12px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+                <label for="barGroupSelect"><strong>Group By:</strong></label>
+                <select id="barGroupSelect">
+                    <option value="state">State</option>
+                    <option value="primary_fuel">Primary Fuel</option>
+                    <option value="facility">Facility</option>
+                    <option value="epa_unit_id">Unit ID</option>
+                    <option value="so2_control">SO2 Control</option>
+                </select>
 
+                <label for="barMetricSelect"><strong>Metric:</strong></label>
+                <select id="barMetricSelect">
+                    <option value="co2_mass">CO2 Emissions (tons)</option>
+                    <option value="gross_load">Gross Load (MWh)</option>
+                    <option value="intensity">CO2 Intensity (tons/MWh)</option>
+                    <option value="so2_mass">SO2 Emissions (tons)</option>
+                    <option value="nox_mass">NOx Emissions (tons)</option>
+                </select>
+            </div>    
             <!-- Chart Content Box -->
             <div class="vis_content chart_style" id="visContentBox">
                 <canvas id="datasetChart"></canvas>
@@ -385,6 +404,8 @@
             });
             document.getElementById('rankingEntitySelect')?.addEventListener('change', renderRankings);
             document.getElementById('rankingMetricSelect')?.addEventListener('change', renderRankings);
+            document.getElementById('barGroupSelect')?.addEventListener('change', renderCurrentChart);
+            document.getElementById('barMetricSelect')?.addEventListener('change', renderCurrentChart);
 
             document.getElementById('rankDescBtn')?.addEventListener('click', () => {
                 rankingOrder = 'desc';
@@ -439,6 +460,10 @@
 
     // Function to render the charts with my.chart ---------------
     function renderCurrentChart() {
+        const barControls = document.getElementById('barChartControls');
+        if (barControls) {
+            barControls.style.display = currentChartType === 'bar' ? 'flex' : 'none';
+        }
         if (!currentDataset || !currentDataset.records) return;
 
         if (myChart) {
@@ -451,7 +476,8 @@
             facility: rec.Unit?.Facility?.facility_name || 'Unknown',
             state: rec.Unit?.Facility?.state || 'Unknown',
             epa_unit_id: rec.Unit?.epa_unit_id || 'Unknown',
-            primary_fuel: rec.Unit?.primary_fuel || 'Unknown'
+            primary_fuel: rec.Unit?.primary_fuel || 'Unknown',
+            so2_control: rec.so2_control || 'None'
         }));
 
         if (records.length === 0) return;
@@ -573,26 +599,52 @@
     // 2. Render bar chart functionality -------------------------------
 
     // can compare states, fuels, facilities, units, or control technologies
-    function renderBarChart(records) {
+   function renderBarChart(records) {
         const ctx = document.getElementById('datasetChart').getContext('2d');
-        const groupFields = ['state', 'primary_fuel', 'facility', 'epa_unit_id'];
-        const activeGroupField = groupFields.find(field => records.some(r => r[field] !== undefined && r[field] !== null)) || 'reporting_year';
+        const activeGroupField = document.getElementById('barGroupSelect')?.value || 'state';
+        const metric = document.getElementById('barMetricSelect')?.value || 'co2_mass';
 
-        const aggregatedData = {};
+        const metricMeta = {
+            co2_mass:   { label: 'Total CO2 Emissions (tons)', axis: 'CO2 Emissions (tons)' },
+            gross_load: { label: 'Total Gross Load (MWh)', axis: 'Gross Load (MWh)' },
+            intensity:  { label: 'CO2 Intensity (tons/MWh)', axis: 'CO2 Intensity (tons/MWh)' },
+            so2_mass:   { label: 'Total SO2 Emissions (tons)', axis: 'SO2 Emissions (tons)' },
+            nox_mass:   { label: 'Total NOx Emissions (tons)', axis: 'NOx Emissions (tons)' }
+        };
+        const activeMeta = metricMeta[metric] || metricMeta.co2_mass;
+
+        const grouped = {};
         records.forEach(r => {
             const key = r[activeGroupField] || 'Unknown';
-            aggregatedData[key] = (aggregatedData[key] || 0) + (Number(r.co2_mass) || 0);
+            if (!grouped[key]) grouped[key] = { co2: 0, so2: 0, nox: 0, load: 0 };
+            if (r.co2_mass != null) grouped[key].co2 += Number(r.co2_mass) || 0;
+            if (r.so2_mass != null) grouped[key].so2 += Number(r.so2_mass) || 0;
+            if (r.nox_mass != null) grouped[key].nox += Number(r.nox_mass) || 0;
+            if (r.gross_load != null) grouped[key].load += Number(r.gross_load) || 0;
         });
+
+        const entries = Object.entries(grouped)
+            .map(([key, g]) => {
+                let val = null;
+                if (metric === 'co2_mass') val = g.co2;
+                else if (metric === 'gross_load') val = g.load;
+                else if (metric === 'so2_mass') val = g.so2;
+                else if (metric === 'nox_mass') val = g.nox;
+                else if (metric === 'intensity') val = g.load > 0 ? Number((g.co2 / g.load).toFixed(4)) : null;
+                return [key, val];
+            })
+            .filter(([, val]) => val !== null && !isNaN(val))
+            .sort((a, b) => b[1] - a[1]);
 
         myChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: Object.keys(aggregatedData),
+                labels: entries.map(e => e[0]),
                 datasets: [{
-                    label: `Total CO2 Emissions by ${activeGroupField.replace('_', ' ').toUpperCase()}`,
-                    data: Object.values(aggregatedData),
-                    backgroundColor: '#97D3EA',
-                    borderColor: '#97D3EA',
+                    label: `${activeMeta.label} by ${activeGroupField.replace('_', ' ').toUpperCase()}`,
+                    data: entries.map(e => e[1]),
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgb(54, 162, 235)',
                     borderWidth: 1
                 }]
             },
@@ -602,7 +654,7 @@
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: 'Total CO2 Mass (tons)' }
+                        title: { display: true, text: activeMeta.axis }
                     }
                 }
             }
