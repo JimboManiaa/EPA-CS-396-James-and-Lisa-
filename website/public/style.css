@@ -127,7 +127,7 @@ th {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  height: 500px;
+  height: 600px;
 }
 
 #site-search, #assisted-search-input {
@@ -234,6 +234,7 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
 .vis_content {
     background-color: white;
     height: 500px;
+    padding: 50px;
 }
 .vis_cell {
     background-color: #f4f5f5;
@@ -250,7 +251,7 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
 }
 .vis_cols1 {
   display: grid;
-  grid-template-columns: 2fr 1fr; 
+  grid-template-columns: 2fr 1.2fr; 
   gap: 10px;
 }
 .scroll_container {
@@ -285,6 +286,42 @@ https://www.youtube.com/watch?v=2cPKsxJcF9Y
     border: 3px solid #d3d7d7;
     border-radius: 5px;
 }
+
+/* Styling for bar chart controls */
+.barChartStyle {
+    display: none; 
+    align-items: center; 
+    flex-wrap: wrap;
+}
+
+/* Styling for State Map */
+.stateStyle {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px;
+}
+
+.descStats {
+    display: flex; 
+    justify-content: space-between; 
+    flex-wrap: wrap; 
+    gap: 10px;
+    padding-top: 10px;
+}
+
+.comparisonCols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+
+
+
+
+
 
 
 /* Analyze Data Page ========================================== */

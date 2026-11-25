@@ -53,13 +53,17 @@
                 </div>
             </div>
         </div>
+        <hr>
 
         <!-- Visualizer =========================================================== -->
-        <div class="info_content">
+        <div>
             <h3 id="selectedDatasetName">Dataset Name</h3>
-            <!-- Bar Chart Controls (only visible when Bar Chart is active) -->
-            <div id="barChartControls" style="display: none; gap: 12px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
-                <label for="barGroupSelect"><strong>Group By:</strong></label>
+
+            <!-- Bar Chart Controls =========================================================== -->
+            <div id="barChartControls" class="barChartStyle">
+
+                <!-- Group Select -->
+                <label for="barGroupSelect">Group By:</label>
                 <select id="barGroupSelect">
                     <option value="state">State</option>
                     <option value="primary_fuel">Primary Fuel</option>
@@ -71,7 +75,8 @@
                     <option value="pm_control">PM Control</option>
                 </select>
 
-                <label for="barMetricSelect"><strong>Metric:</strong></label>
+                <!-- Metric Select -->
+                <label for="barMetricSelect">Metric:</label>
                 <select id="barMetricSelect">
                     <option value="co2_mass">CO2 Emissions (tons)</option>
                     <option value="gross_load">Gross Load (MWh)</option>
@@ -79,8 +84,9 @@
                     <option value="so2_mass">SO2 Emissions (tons)</option>
                     <option value="nox_mass">NOx Emissions (tons)</option>
                 </select>
-            </div>    
-            <!-- Chart Content Box -->
+            </div>
+
+            <!-- Chart Content Box =========================================================== -->
             <div class="vis_content chart_style" id="visContentBox">
                 <canvas id="datasetChart"></canvas>
             </div>
@@ -97,133 +103,134 @@
                 </tr>
             </table>
 
-            <!-- Descriptive Statistics (Rubric Section 4.2) -->
-            <div style="margin-top: 15px; background: white; border: 2px solid #d3d7d7; border-radius: 5px; padding: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-                    <h4 style="margin: 0;">Descriptive Statistics</h4>
-                    <div>
-                        <label for="statsMetricSelect"><strong>Variable:</strong></label>
-                        <select id="statsMetricSelect">
-                            <option value="co2_mass">CO2 Mass (tons)</option>
-                            <option value="so2_mass">SO2 Mass (tons)</option>
-                            <option value="nox_mass">NOx Mass (tons)</option>
-                            <option value="gross_load">Gross Load (MWh)</option>
-                            <option value="heat_input">Heat Input (MMBtu)</option>
-                            <option value="co2_intensity">CO2 Intensity (tons/MWh)</option>
-                            <option value="heat_rate">Heat Rate (MMBtu/MWh)</option>
-                        </select>
-                    </div>
-                </div>
-                <table class="db_table" style="background: white;">
-                    <thead>
-                        <tr>
-                            <th>Count</th>
-                            <th>Missing</th>
-                            <th>Min</th>
-                            <th>Q1 (25%)</th>
-                            <th>Median</th>
-                            <th>Mean</th>
-                            <th>Q3 (75%)</th>
-                            <th>Max</th>
-                            <th>Std Dev</th>
-                            <th>IQR</th>
-                        </tr>
-                    </thead>
-                    <tbody id="descriptiveStatsBody">
-                        <tr><td colspan="10">Select a dataset to view statistics.</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
         </div>
 
         <!-- Divide the Content Box =========================================================== -->
         <div class="vis_cols1">
 
-<!-- State Level Visualizer -->
-<div class="info_content">
-    <h3 id="stateMapTitle">State-Level Emissions &amp; Load Map</h3>
+        <!-- State Level Visualizer -->
+        <div class="info_content">
 
-    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
-        <label for="mapMetricSelect"><strong>Metric:</strong></label>
-        <select id="mapMetricSelect">
-            <option value="co2_mass">CO2 Emissions (tons)</option>
-            <option value="gross_load">Gross Load (MWh)</option>
-            <option value="intensity">CO2 Intensity (tons/MWh)</option>
-            <option value="so2_mass">SO2 Emissions (tons)</option>
-            <option value="nox_mass">NOx Emissions (tons)</option>
-        </select>
+            <!-- Title -->
+            <h3 id="stateMapTitle">State-Level Emissions & Load Map</h3>
+            
+            <div class="stateStyle">
+                <!-- State Map select-->
+                <label for="mapMetricSelect">Metric: </label>
+                    <select id="mapMetricSelect">
+                    <option value="co2_mass">CO2 Emissions (tons)</option>
+                    <option value="gross_load">Gross Load (MWh)</option>
+                    <option value="intensity">CO2 Intensity (tons/MWh)</option>
+                    <option value="so2_mass">SO2 Emissions (tons)</option>
+                    <option value="nox_mass">NOx Emissions (tons)</option>
+                </select>
 
-        <button type="button" id="downloadMapCsvBtn">Download Map Data (CSV)</button>
-    </div>
+                <!-- Download button -->
+                    <button type="button" id="downloadMapCsvBtn" style="margin-left: 30px;">Download Map Data (CSV)</button>
+            </div>    
 
-    <div id="stateMapContainer" style="width: 100%; height: 420px;"></div>
-</div>
+            <!-- State Map Container -->
+            <div id="stateMapContainer" class ="chart_style" style="width: 100%; height: 420px;"></div>
 
-
-
-
-
-
-
-
-
-
-
-    <!-- Rankings -->
-    <div class="info_content">
-        <h3 id="rankingTitle">Data Rankings</h3>
-
-        <!-- Controls: Entity, Metric, Sort High/Low -->
-        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
-            <select id="rankingEntitySelect">
-                <option value="facility">By Facility</option>
-                <option value="unit">By Unit</option>
-                <option value="state">By State</option>
-            </select>
-
-            <select id="rankingMetricSelect">
-                <option value="co2_mass">CO2 Emissions (tons)</option>
-                <option value="so2_mass">SO2 Emissions (tons)</option>
-                <option value="nox_mass">NOx Emissions (tons)</option>
-                <option value="gross_load">Gross Load (MWh)</option>
-                <option value="intensity">CO2 Intensity (tons/MWh)</option>
-            </select>
-
-            <button type="button" id="rankDescBtn" title="Sort High to Low" style="font-weight: bold;">↓ High</button>
-            <button type="button" id="rankAscBtn" title="Sort Low to High">↑ Low</button>
         </div>
 
-        <!-- Scrollable Numbered Ranking List -->
-        <div id="rankingList" style="max-height: 420px; overflow-y: auto; border: 1px solid #ccc; padding: 8px 12px; background: #fff;">
-            <p>Select a dataset to view rankings.</p>
+        <!-- Rankings =========================================================================================== -->
+        <div class="info_content">
+            <h3 id="rankingTitle">Data Rankings</h3>
+
+            <!-- Controls: Entity, Metric, Sort High/Low -->
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+                <select id="rankingEntitySelect">
+                    <option value="facility">By Facility</option>
+                    <option value="unit">By Unit</option>
+                    <option value="state">By State</option>
+                </select>
+
+                <select id="rankingMetricSelect">
+                    <option value="co2_mass">CO2 Emissions (tons)</option>
+                    <option value="so2_mass">SO2 Emissions (tons)</option>
+                    <option value="nox_mass">NOx Emissions (tons)</option>
+                    <option value="gross_load">Gross Load (MWh)</option>
+                    <option value="intensity">CO2 Intensity (tons/MWh)</option>
+                </select>
+
+                <button type="button" id="rankDescBtn" title="Sort High to Low" style="font-weight: bold;">↓ High</button>
+                <button type="button" id="rankAscBtn" title="Sort Low to High">↑ Low</button>
+            </div>
+
+            <!-- Scrollable Numbered Ranking List -->
+            <div id="rankingList" class="contentRankings" style="max-height: 420px; overflow-y: auto; border: 1px solid #ccc; padding: 8px 12px; background: #fff;">
+                <p>Select a dataset to view rankings.</p>
+            </div>
         </div>
     </div>
+    
+    <!-- Descriptive Statistics =========================================================================================== -->
+    <div>
+        <div class="info_content">
+        <!-- Style the Options -->
+            <div class="descStats">
+                <h4 style="margin: 0;">Descriptive Statistics</h4>
+                    
+                    <div>
+                        <label for="statsMetricSelect"><strong>Variable:</strong></label>
+                            <select id="statsMetricSelect">
+                                <option value="co2_mass">CO2 Mass (tons)</option>
+                                <option value="so2_mass">SO2 Mass (tons)</option>
+                                <option value="nox_mass">NOx Mass (tons)</option>
+                                <option value="gross_load">Gross Load (MWh)</option>
+                                <option value="heat_input">Heat Input (MMBtu)</option>
+                                <option value="co2_intensity">CO2 Intensity (tons/MWh)</option>
+                                <option value="heat_rate">Heat Rate (MMBtu/MWh)</option>
+                            </select>
+                        </div>
+                    
+                    <table class="db_table" style="background: white;">
+                        <thead>
+                            <tr>
+                                <th>Count</th>
+                                <th>Missing</th>
+                                <th>Min</th>
+                                <th>Q1 (25%)</th>
+                                <th>Median</th>
+                                <th>Mean</th>
+                                <th>Q3 (75%)</th>
+                                <th>Max</th>
+                                <th>Std Dev</th>
+                                <th>IQR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="descriptiveStatsBody">
+                            <tr><td colspan="10">Select a dataset to view statistics.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-        </div>
-
+        <hr>
         <!-- Data Comparison Section ============================================================ -->
         <h2>Compare Data</h2>
-        <hr>
-
-        <div class="info_content">
+        
             <div class="expanding">
                 <input type="checkbox" id="trigger" checked>
-                <label for="trigger" class="exp_label">Compare Datasets</label>
+                <label for="trigger" class="exp_label">Compare To...</label>
 
                 <div class="expanding_content">
-                    <p>Which dataset would you like to compare to?</p>
-                    <hr>
 
-                    <!-- Scrollable Dataset Selector -->
-                    <div class="scroll_container">
-                        <div class="scroll_list" id="compareScrollBody">
-                            <!-- auto populating list -->
+                    <div class="info_content">
+                        <p>Which dataset would you like to compare to?</p>
+                        <hr>
+
+                        <!-- Scrollable Dataset Selector -->
+                        <div class="scroll_container">
+                            <div class="scroll_list" id="compareScrollBody">
+                                <!-- auto populating list -->
+                            </div>
                         </div>
                     </div>
 
                     <!-- Side-by-Side Comparison Charts -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div class="comparisonCols">
                         <div>
                             <h3 id="compareTitleA">Dataset A</h3>
                             <div class="vis_content chart_style">
@@ -249,11 +256,12 @@
                             <td class="vis_cell" data-compare-type="heatmap">Heat Map</td>
                         </tr>
                     </table>
+                    <br>
 
                     <!-- Comparison Summary & Differences -->
                     <div style="margin-top: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <h3 style="margin: 0;">Comparison Summary &amp; Differences</h3>
+                            <h3 style="margin: 0;">Comparison Summary & Differences</h3>
                             <button type="button" id="exportCompareCsvBtn">Export Comparison (CSV)</button>
                         </div>
                         <table class="db_table" style="background: white;">
@@ -272,10 +280,12 @@
                         </table>
                     </div>
 
+                    <hr>
+
                     <!-- Assisted Comparison -->
                     <div style="margin-top: 15px;">
                         <h3>Assisted Comparison</h3>
-                        <button type="button" id="generateComparisonBtn" style="padding: 8px 16px; cursor: pointer; margin-bottom: 10px;">
+                        <button type="button" id="generateComparisonBtn" style="margin-bottom: 10px;">
                             Generate Comparison
                         </button>
                         <div id="assistedComparisonOutput" style="background: white; border: 2px solid #ccc; border-radius: 5px; padding: 12px; min-height: 80px;">
@@ -660,8 +670,8 @@
                 datasets: [{
                     label: `${activeMeta.label} by ${activeGroupField.replace('_', ' ').toUpperCase()}`,
                     data: entries.map(e => e[1]),
-                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: '#97D3EA',
+                    borderColor: '#97D3EA',
                     borderWidth: 1
                 }]
             },
@@ -746,8 +756,8 @@
                 labels: ['CO2 Mass (tons)', 'Gross Load (MWh)'],
                 datasets: [{
                     label: 'Metric Distribution',
-                    backgroundColor: 'rgba(153, 102, 255, 0.5)',
-                    borderColor: 'rgb(153, 102, 255)',
+                    backgroundColor: '#97D3EA',
+                    borderColor: '#97D3EA',
                     borderWidth: 1,
                     outlierColor: '#999999',
                     padding: 10,
@@ -778,8 +788,8 @@
                 datasets: [{
                     label: 'Gross Load vs CO2 Emissions',
                     data: scatterData,
-                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                    borderColor: 'rgb(75, 192, 192)'
+                    backgroundColor: '#97D3EA',
+                    borderColor: '#97D3EA'
                 }]
             },
             options: {
