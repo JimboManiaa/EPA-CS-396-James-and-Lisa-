@@ -64,8 +64,11 @@
                     <option value="state">State</option>
                     <option value="primary_fuel">Primary Fuel</option>
                     <option value="facility">Facility</option>
-                    <option value="epa_unit_id">Unit ID</option>
+                    <option value="unit_label">Unit (Facility - Unit ID)</option>
+                    <option value="unit_type">Unit Type</option>
                     <option value="so2_control">SO2 Control</option>
+                    <option value="nox_control">NOx Control</option>
+                    <option value="pm_control">PM Control</option>
                 </select>
 
                 <label for="barMetricSelect"><strong>Metric:</strong></label>
@@ -404,8 +407,14 @@
             });
             document.getElementById('rankingEntitySelect')?.addEventListener('change', renderRankings);
             document.getElementById('rankingMetricSelect')?.addEventListener('change', renderRankings);
-            document.getElementById('barGroupSelect')?.addEventListener('change', renderCurrentChart);
-            document.getElementById('barMetricSelect')?.addEventListener('change', renderCurrentChart);
+            document.getElementById('barGroupSelect')?.addEventListener('change', () => {
+                renderCurrentChart();
+                if (compareChartType === 'bar') renderComparisonCharts();
+            });
+            document.getElementById('barMetricSelect')?.addEventListener('change', () => {
+                renderCurrentChart();
+                if (compareChartType === 'bar') renderComparisonCharts();
+            });
 
             document.getElementById('rankDescBtn')?.addEventListener('click', () => {
                 rankingOrder = 'desc';
@@ -471,14 +480,22 @@
         }
 
         // Map the Sequelize response to flatten the nested Unit and Facility data
-        const records = currentDataset.records.map(rec => ({
-            ...rec,
-            facility: rec.Unit?.Facility?.facility_name || 'Unknown',
-            state: rec.Unit?.Facility?.state || 'Unknown',
-            epa_unit_id: rec.Unit?.epa_unit_id || 'Unknown',
-            primary_fuel: rec.Unit?.primary_fuel || 'Unknown',
-            so2_control: rec.so2_control || 'None'
-        }));
+        const records = currentDataset.records.map(rec => {
+            const facName = rec.Unit?.Facility?.facility_name || 'Unknown';
+            const unitId = rec.Unit?.epa_unit_id || 'Unknown';
+            return {
+                ...rec,
+                facility: facName,
+                state: rec.Unit?.Facility?.state || 'Unknown',
+                epa_unit_id: unitId,
+                unit_label: `${facName} - Unit ${unitId}`,
+                unit_type: rec.Unit?.unit_type || 'Unknown',
+                primary_fuel: rec.Unit?.primary_fuel || 'Unknown',
+                so2_control: rec.so2_control || 'None',
+                nox_control: rec.nox_control || 'None',
+                pm_control: rec.pm_control || 'None'
+            };
+        });
 
         if (records.length === 0) return;
 
@@ -1163,14 +1180,23 @@
     }
 
     function flattenRecords(rawRecords) {
-        return (rawRecords || []).map(rec => ({
-            ...rec,
-            facility: rec.Unit?.Facility?.facility_name || 'Unknown',
-            state: rec.Unit?.Facility?.state || 'Unknown',
-            epa_unit_id: rec.Unit?.epa_unit_id || 'Unknown',
-            primary_fuel: rec.Unit?.primary_fuel || 'Unknown'
-        }));
-    }
+        return (rawRecords || []).map(rec => {
+            const facName = rec.Unit?.Facility?.facility_name || 'Unknown';
+            const unitId = rec.Unit?.epa_unit_id || 'Unknown';
+            return {
+                ...rec,
+                facility: facName,
+                state: rec.Unit?.Facility?.state || 'Unknown',
+                epa_unit_id: unitId,
+                unit_label: `${facName} - Unit ${unitId}`,
+                unit_type: rec.Unit?.unit_type || 'Unknown',
+                primary_fuel: rec.Unit?.primary_fuel || 'Unknown',
+                so2_control: rec.so2_control || 'None',
+                nox_control: rec.nox_control || 'None',
+                pm_control: rec.pm_control || 'None'
+            };
+        });
+    }   
 
     function buildCompareChart(canvasId, existingChart, records, type) {
         if (existingChart) existingChart.destroy();
@@ -1200,18 +1226,62 @@
         }
 
         if (type === 'bar') {
-            const agg = {};
+            const activeGroupField = document.getElementById('barGroupSelect')?.value || 'state';
+            const metric = document.getElementById('barMetricSelect')?.value || 'co2_mass';
+            const metricMeta = {
+                co2_mass:   { label: 'Total CO2 Emissions (tons)', axis: 'CO2 Emissions (tons)' },
+                gross_load: { label: 'Total Gross Load (MWh)', axis: 'Gross Load (MWh)' },
+                intensity:  { label: 'CO2 Intensity (tons/MWh)', axis: 'CO2 Intensity (tons/MWh)' },
+                so2_mass:   { label: 'Total SO2 Emissions (tons)', axis: 'SO2 Emissions (tons)' },
+                nox_mass:   { label: 'Total NOx Emissions (tons)', axis: 'NOx Emissions (tons)' }
+            };
+            const activeMeta = metricMeta[metric] || metricMeta.co2_mass;
+
+            const grouped = {};
             records.forEach(r => {
-                const k = r.state || 'Unknown';
-                agg[k] = (agg[k] || 0) + (Number(r.co2_mass) || 0);
+                const key = r[activeGroupField] || 'Unknown';
+                if (!grouped[key]) grouped[key] = { co2: 0, so2: 0, nox: 0, load: 0 };
+                if (r.co2_mass != null) grouped[key].co2 += Number(r.co2_mass) || 0;
+                if (r.so2_mass != null) grouped[key].so2 += Number(r.so2_mass) || 0;
+                if (r.nox_mass != null) grouped[key].nox += Number(r.nox_mass) || 0;
+                if (r.gross_load != null) grouped[key].load += Number(r.gross_load) || 0;
             });
+
+            const entries = Object.entries(grouped)
+                .map(([key, g]) => {
+                    let val = null;
+                    if (metric === 'co2_mass') val = g.co2;
+                    else if (metric === 'gross_load') val = g.load;
+                    else if (metric === 'so2_mass') val = g.so2;
+                    else if (metric === 'nox_mass') val = g.nox;
+                    else if (metric === 'intensity') val = g.load > 0 ? Number((g.co2 / g.load).toFixed(4)) : null;
+                    return [key, val];
+                })
+                .filter(([, val]) => val !== null && !isNaN(val))
+                .sort((a, b) => b[1] - a[1]);
+
             return new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: Object.keys(agg),
-                    datasets: [{ label: 'Total CO2 by State (tons)', data: Object.values(agg), backgroundColor: 'rgba(54, 162, 235, 0.6)' }]
+                    labels: entries.map(e => e[0]),
+                    datasets: [{
+                        label: `${activeMeta.label} by ${activeGroupField.replace('_', ' ').toUpperCase()}`,
+                        data: entries.map(e => e[1]),
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        borderWidth: 1
+                    }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: activeMeta.axis }
+                        }
+                    }
+                }
             });
         }
 
